@@ -14,8 +14,7 @@
     "react-dom": "19.2.1"
   },
   "devDependencies": {
-    "@next/swc-win32-x64-msvc": "^16.0.10",
-    "@tailwindcss/oxide-win32-x64-msvc": "^4.1.18",
+    "@tailwindcss/oxide": "^4.1.18",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
