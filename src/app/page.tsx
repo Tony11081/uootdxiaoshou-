@@ -11,6 +11,7 @@ const SALES_WHATSAPP = "+86 134 6224 8923";
 const STORAGE_CART_KEY = "uootd_cart_v1";
 const AUTO_DELETE_DAYS = 7;
 const QUOTE_TIMEOUT_MS = 12000;
+const MAX_IMAGE_CHARS_FOR_CART = 8000;
 
 const expectationLine: Record<Locale, string> = {
   en: "Most items get an instant quote. If an instant quote isn’t available, an insider replies on WhatsApp.",
@@ -139,8 +140,9 @@ function saveCart(items: CartItem[]) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(STORAGE_CART_KEY, JSON.stringify(items));
+    return true;
   } catch {
-    // ignore
+    return false;
   }
 }
 
@@ -234,6 +236,7 @@ export default function Home() {
   const [lead, setLead] = useState<LeadForm>({ paypal: "", whatsapp: "" });
 
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartError, setCartError] = useState<string | null>(null);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -245,7 +248,12 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    saveCart(cart);
+    const ok = saveCart(cart);
+    if (!ok && cart.length) {
+      setCartError("Could not save list (storage is full). Try clearing old items.");
+    } else {
+      setCartError(null);
+    }
   }, [cart]);
 
   const view = useMemo(() => {
@@ -346,9 +354,8 @@ export default function Home() {
     reader.readAsDataURL(file);
   };
 
-  const buildWhatsAppLink = () => {
-    const salesNumber = sanitizeNumber(SALES_WHATSAPP);
-    const message = [
+  const buildWhatsAppMessage = () => {
+    return [
       "UOOTD | Quote Request",
       `Quote ID: ${quote.id}`,
       `Category: ${quote.category}`,
@@ -361,8 +368,11 @@ export default function Home() {
     ]
       .filter(Boolean)
       .join("\n");
+  };
 
-    return `https://wa.me/${salesNumber}?text=${encodeURIComponent(message)}`;
+  const buildWhatsAppLink = () => {
+    const salesNumber = sanitizeNumber(SALES_WHATSAPP);
+    return `https://api.whatsapp.com/send?phone=${salesNumber}&text=${encodeURIComponent(buildWhatsAppMessage())}`;
   };
 
   const handleCheckoutClick = () => {
@@ -372,9 +382,22 @@ export default function Home() {
   };
 
   const handleAddToCart = () => {
+    const slimImage =
+      quote.imageUrl && quote.imageUrl.length > MAX_IMAGE_CHARS_FOR_CART
+        ? ""
+        : quote.imageUrl;
+
     setCart((prev) => {
       if (prev.some((item) => item.id === quote.id)) return prev;
-      return [...prev, { ...quote, size: lead.size, addedAt: Date.now() }];
+      return [
+        ...prev,
+        {
+          ...quote,
+          imageUrl: slimImage,
+          size: lead.size,
+          addedAt: Date.now(),
+        },
+      ];
     });
   };
 
@@ -990,12 +1013,28 @@ export default function Home() {
               {error ? (
                 <p className="text-sm font-semibold text-[#9a3b3b]">{error}</p>
               ) : null}
+              {cartError ? (
+                <p className="text-sm font-semibold text-[#9a3b3b]">{cartError}</p>
+              ) : null}
 
               <button
                 className="gold-button flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold uppercase tracking-[0.16em]"
                 onClick={handleLeadSubmit}
               >
                 Continue in WhatsApp
+              </button>
+              <button
+                className="outline-button flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]"
+                onClick={() => {
+                  const message = buildWhatsAppMessage();
+                  if (navigator?.clipboard?.writeText) {
+                    navigator.clipboard.writeText(message).catch(() => {});
+                  } else {
+                    window.prompt("Copy this message and paste into WhatsApp:", message);
+                  }
+                }}
+              >
+                Copy message (if WhatsApp is blocked)
               </button>
               <p className="text-xs text-[#5c5345]">
                 Privacy: your screenshot is used only to prepare your quote.
