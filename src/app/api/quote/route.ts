@@ -18,12 +18,53 @@ const MODEL = process.env.GEMINI_API_KEY
     })
   : null;
 
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const OPENROUTER_MODEL = "google/gemini-2.5-flash";
+
 function parseDataUrl(imageUrl: string) {
   if (!imageUrl.startsWith("data:")) return null;
   const match = imageUrl.match(/^data:(.+);base64,(.*)$/);
   if (!match) return null;
   const [, mimeType, data] = match;
   return { mimeType, data };
+}
+
+async function callOpenRouter(imageUrl: string, prompt: string, descriptionHint?: string) {
+  if (!OPENROUTER_API_KEY) return null;
+
+  const dataUrl = parseDataUrl(imageUrl);
+  const parts: Array<{ type: string; text?: string; image_url?: { url: string } }> = [
+    { type: "text", text: prompt },
+  ];
+  if (dataUrl) {
+    parts.push({ type: "image_url", image_url: { url: `data:${dataUrl.mimeType};base64,${dataUrl.data}` } });
+  } else {
+    parts.push({ type: "text", text: `Image URL: ${imageUrl}` });
+  }
+  if (descriptionHint) {
+    parts.push({ type: "text", text: `User hint: ${descriptionHint}` });
+  }
+
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: OPENROUTER_MODEL,
+      messages: [{ role: "user", content: parts }],
+      response_format: { type: "json_object" },
+      max_tokens: 400,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`OpenRouter request failed: ${res.status}`);
+  }
+  const data = await res.json();
+  const text = data?.choices?.[0]?.message?.content?.[0]?.text || data?.choices?.[0]?.message?.content;
+  return text as string;
 }
 
 function normalizeCategory(value: string | undefined): Category {
@@ -56,18 +97,6 @@ async function fetchDetection(
   requestedCategory: Category,
   descriptionHint?: string,
 ) {
-  if (!MODEL) return null;
-
-  const dataUrl = parseDataUrl(imageUrl);
-  const imagePart = dataUrl
-    ? {
-        inlineData: {
-          data: dataUrl.data,
-          mimeType: dataUrl.mimeType,
-        },
-      }
-    : null;
-
   const prompt = `
 You are a product identifier for luxury fashion items.
 Return JSON ONLY with keys:
@@ -77,27 +106,55 @@ Return JSON ONLY with keys:
 - description: one sentence marketing-style description (string)
 `.trim();
 
-  const parts = [{ text: prompt }] as Array<{ text: string } | { inlineData: { data: string; mimeType: string } }>;
-  if (imagePart) {
-    parts.push(imagePart);
-  } else {
-    parts.push({ text: `Image URL: ${imageUrl}` });
-  }
-  if (descriptionHint) {
-    parts.push({ text: `User hint: ${descriptionHint}` });
+  // Try OpenRouter first if configured
+  if (OPENROUTER_API_KEY) {
+    const rawText = await callOpenRouter(imageUrl, prompt, descriptionHint).catch(() => null);
+    const parsed = safeJsonParse<{
+      product_name?: string;
+      category?: string;
+      detected_msrp_usd?: number;
+      description?: string;
+    }>(rawText || "");
+    if (parsed) return parsed;
   }
 
-  const result = await MODEL.generateContent({
-    contents: [{ role: "user", parts }],
-  });
+  if (MODEL) {
+    const dataUrl = parseDataUrl(imageUrl);
+    const imagePart = dataUrl
+      ? {
+          inlineData: {
+            data: dataUrl.data,
+            mimeType: dataUrl.mimeType,
+          },
+        }
+      : null;
 
-  const rawText = result.response?.text();
-  return safeJsonParse<{
-    product_name?: string;
-    category?: string;
-    detected_msrp_usd?: number;
-    description?: string;
-  }>(rawText);
+    const parts = [
+      { text: prompt },
+    ] as Array<{ text: string } | { inlineData: { data: string; mimeType: string } }>;
+    if (imagePart) {
+      parts.push(imagePart);
+    } else {
+      parts.push({ text: `Image URL: ${imageUrl}` });
+    }
+    if (descriptionHint) {
+      parts.push({ text: `User hint: ${descriptionHint}` });
+    }
+
+    const result = await MODEL.generateContent({
+      contents: [{ role: "user", parts }],
+    });
+
+    const rawText = result.response?.text();
+    return safeJsonParse<{
+      product_name?: string;
+      category?: string;
+      detected_msrp_usd?: number;
+      description?: string;
+    }>(rawText);
+  }
+
+  return null;
 }
 
 export async function POST(request: Request) {
