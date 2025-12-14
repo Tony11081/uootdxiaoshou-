@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type AdminQuote = {
   id: string;
@@ -39,10 +39,35 @@ function formatUsd(value: number) {
 export default function AdminPortal() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [otp, setOtp] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/session")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.authenticated) setLoggedIn(true);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleLogin = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setLoggedIn(true);
+    setError(null);
+    fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, totp: otp }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          throw new Error(data?.error || "Login failed");
+        }
+        setLoggedIn(true);
+      })
+      .catch((err) => setError(err.message));
   };
 
   const copyValue = (value: string) => {
@@ -67,11 +92,11 @@ export default function AdminPortal() {
       </div>
 
       {!loggedIn ? (
-        <form
-          onSubmit={handleLogin}
-          className="glass-card grid gap-3 rounded-3xl p-6 sm:grid-cols-2"
-        >
-          <div className="sm:col-span-2">
+          <form
+            onSubmit={handleLogin}
+            className="glass-card grid gap-3 rounded-3xl p-6 sm:grid-cols-2"
+          >
+            <div className="sm:col-span-2">
             <p className="text-xs uppercase tracking-[0.2em] text-[#7b6848]">
               Dual Factor Login
             </p>
@@ -85,6 +110,8 @@ export default function AdminPortal() {
             </label>
             <input
               type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="rounded-2xl border border-black/10 bg-white/80 px-4 py-3 text-sm shadow-inner focus:border-[#d4af37] focus:outline-none"
               placeholder="admin@uootd.com"
               required
@@ -96,6 +123,8 @@ export default function AdminPortal() {
             </label>
             <input
               type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="rounded-2xl border border-black/10 bg-white/80 px-4 py-3 text-sm shadow-inner focus:border-[#d4af37] focus:outline-none"
               placeholder="••••••••"
               required
@@ -114,6 +143,9 @@ export default function AdminPortal() {
               required
             />
           </div>
+          {error ? (
+            <p className="text-sm font-semibold text-[#9a3b3b] sm:col-span-2">{error}</p>
+          ) : null}
           <div className="self-end">
             <button
               type="submit"
