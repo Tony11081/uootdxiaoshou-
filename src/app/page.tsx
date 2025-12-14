@@ -10,6 +10,7 @@ import type { Locale, Quote } from "@/types/quote";
 const SALES_WHATSAPP = "+86 134 6224 8923";
 const STORAGE_CART_KEY = "uootd_cart_v1";
 const AUTO_DELETE_DAYS = 7;
+const QUOTE_TIMEOUT_MS = 12000;
 
 const expectationLine: Record<Locale, string> = {
   en: "Most items get an instant quote. If an instant quote isn’t available, an insider replies on WhatsApp.",
@@ -273,14 +274,20 @@ export default function Home() {
     setError(null);
     setPreview(imageUrl);
 
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), QUOTE_TIMEOUT_MS);
+
     try {
       const response = await fetch("/api/quote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageUrl, source, demoType }),
+        signal: controller.signal,
       });
 
-      if (!response.ok) throw new Error("Quote service failed");
+      if (!response.ok) {
+        throw new Error(`Quote service failed (${response.status})`);
+      }
 
       const data = await response.json();
       const nextQuote: Quote = {
@@ -301,9 +308,15 @@ export default function Home() {
       setStatus(nextQuote.status === "FAST_TRACK" ? "ready" : "manual");
     } catch (err) {
       console.error(err);
+      const isAbort = err instanceof DOMException && err.name === "AbortError";
       setStatus("error");
-      setError("Quote service is unavailable. Try again.");
+      setError(
+        isAbort
+          ? "Quote service timed out. Try again or tap a sample."
+          : "Quote service is unavailable. Try again.",
+      );
     }
+    window.clearTimeout(timeoutId);
   };
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
