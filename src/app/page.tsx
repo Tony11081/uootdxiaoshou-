@@ -456,7 +456,7 @@ export default function Home() {
 
   const buildWhatsAppLink = () => {
     const salesNumber = sanitizeNumber(SALES_WHATSAPP);
-    return `https://api.whatsapp.com/send?phone=${salesNumber}&text=${encodeURIComponent(buildWhatsAppMessage())}`;
+    return `https://wa.me/${salesNumber}?text=${encodeURIComponent(buildWhatsAppMessage())}`;
   };
 
   const buildEmailLink = () => {
@@ -515,7 +515,11 @@ export default function Home() {
       console.error(err);
     }
 
-    window.open(buildWhatsAppLink(), "_blank");
+    const link = buildWhatsAppLink();
+    // On mobile, use same-tab navigation to avoid popup blockers / about:blank issues.
+    if (typeof window !== "undefined") {
+      window.location.href = link;
+    }
     setLeadOpen(false);
   };
 
