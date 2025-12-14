@@ -54,7 +54,7 @@ export function sessionCookie(jwt: string, maxAge = SESSION_TTL_SECONDS) {
     value: jwt,
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge,
   };

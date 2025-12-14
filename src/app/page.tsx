@@ -448,7 +448,7 @@ export default function Home() {
       `Customer WhatsApp: ${lead.whatsapp}`,
       isFootwear ? `Size: ${lead.size || "N/A"}` : null,
       lead.note?.trim() ? `Note: ${lead.note.trim()}` : null,
-      `Image: ${quote.imageUrl}`,
+      "Screenshot: uploaded via uootd.com",
     ]
       .filter(Boolean)
       .join("\n");
@@ -491,37 +491,48 @@ export default function Home() {
     });
   };
 
-  const submitLead = async () => {
+  const buildLeadPayload = (channel: "whatsapp" | "email") => {
+    return {
+      ...lead,
+      quoteId: quote.id,
+      category: quote.category,
+      productName: quote.productName,
+      detectedMsrpUsd: quote.detectedMsrpUsd,
+      quoteUsd: quote.quoteUsd,
+      status: quote.status,
+      channel,
+    };
+  };
+
+  const captureLead = (channel: "whatsapp" | "email") => {
     setError(null);
 
     if (!lead.paypal || !lead.whatsapp) {
       setError("PayPal email and WhatsApp are required.");
-      return;
+      return false;
     }
 
     try {
-      await fetch("/api/leads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...lead,
-          quoteId: quote.id,
-          category: quote.category,
-          productName: quote.productName,
-          imageUrl: quote.imageUrl,
-          detectedMsrpUsd: quote.detectedMsrpUsd,
-          quoteUsd: quote.quoteUsd,
-          status: quote.status,
-        }),
-      });
+      const body = JSON.stringify(buildLeadPayload(channel));
+      if (typeof navigator !== "undefined" && "sendBeacon" in navigator) {
+        const blob = new Blob([body], { type: "application/json" });
+        navigator.sendBeacon("/api/leads", blob);
+      } else {
+        void fetch("/api/leads", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+          keepalive: true,
+        });
+      }
     } catch (err) {
       console.error(err);
     }
+    return true;
   };
 
-  const handleLeadSubmit = async () => {
-    await submitLead();
-
+  const handleLeadSubmit = () => {
+    if (!captureLead("whatsapp")) return;
     const link = buildWhatsAppLink();
     // On mobile, use same-tab navigation to avoid popup blockers / about:blank issues.
     if (typeof window !== "undefined") {
@@ -530,8 +541,8 @@ export default function Home() {
     setLeadOpen(false);
   };
 
-  const handleEmailFallback = async () => {
-    await submitLead();
+  const handleEmailFallback = () => {
+    if (!captureLead("email")) return;
     const link = buildEmailLink();
     if (typeof window !== "undefined") {
       window.open(link, "_blank");

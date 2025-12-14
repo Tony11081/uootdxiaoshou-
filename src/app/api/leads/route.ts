@@ -40,6 +40,10 @@ export async function POST(request: Request) {
     detectedMsrpUsd: toNumber(payload.detectedMsrpUsd),
     quoteUsd: payload.quoteUsd === null ? null : toNumber(payload.quoteUsd),
     status: typeof payload.status === "string" ? payload.status : undefined,
+    channel:
+      payload.channel === "whatsapp" || payload.channel === "email"
+        ? payload.channel
+        : undefined,
     imageUrl: typeof payload.imageUrl === "string" ? payload.imageUrl : undefined,
     sourceIp: request.headers.get("x-forwarded-for") || undefined,
   });

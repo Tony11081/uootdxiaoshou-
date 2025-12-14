@@ -13,6 +13,7 @@ type LeadRow = {
   detectedMsrpUsd?: number | null;
   quoteUsd?: number | null;
   status?: string;
+  channel?: "whatsapp" | "email";
   paypal: string;
   whatsapp: string;
   size?: string;
@@ -189,7 +190,17 @@ export default function AdminPortal() {
           <div className="mt-4 overflow-hidden rounded-2xl border border-black/10">
             <div className="flex items-center justify-between bg-white/70 px-4 py-2 text-xs text-[#5c5345]">
               <span>Live leads submitted from the upload flow.</span>
-              {loadingLeads ? <span>Refreshing…</span> : null}
+              <div className="flex items-center gap-2">
+                {loadingLeads ? <span>Refreshing…</span> : null}
+                <button
+                  type="button"
+                  onClick={() => void loadLeads()}
+                  className="outline-button rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]"
+                  disabled={loadingLeads}
+                >
+                  Refresh
+                </button>
+              </div>
             </div>
             <table className="w-full border-separate border-spacing-0 text-sm">
               <thead className="bg-black text-[#fef7d2]">
@@ -245,6 +256,11 @@ export default function AdminPortal() {
                     <td className="px-3 py-2 text-[#5c5345]">
                       <div>{lead.paypal}</div>
                       <div className="text-[11px]">{lead.whatsapp}</div>
+                      {lead.channel ? (
+                        <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7b6848]">
+                          via {lead.channel}
+                        </div>
+                      ) : null}
                     </td>
                     <td className="px-3 py-2 text-[#5c5345]">
                       {lead.size ? <div>Size: {lead.size}</div> : null}
