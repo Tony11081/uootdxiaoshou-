@@ -12,8 +12,11 @@ type CartItem = Quote & { size?: string; addedAt?: number };
 
 function loadCart(): CartItem[] {
   if (typeof window === "undefined") return [];
+  const testKey = "__uootd_storage_test__";
   try {
-    const raw = window.localStorage.getItem(STORAGE_CART_KEY);
+    const primary = window.localStorage.getItem(STORAGE_CART_KEY);
+    const fallback = window.sessionStorage.getItem(STORAGE_CART_KEY);
+    const raw = primary || fallback;
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -28,16 +31,30 @@ function loadCart(): CartItem[] {
       }))
       .filter((item) => now - (item.addedAt || now) <= maxAgeMs);
   } catch {
+    // try to verify sessionStorage at least exists
+    try {
+      window.sessionStorage.setItem(testKey, "1");
+      window.sessionStorage.removeItem(testKey);
+    } catch {
+      // ignore
+    }
     return [];
   }
 }
 
 function saveCart(items: CartItem[]) {
   if (typeof window === "undefined") return;
+  const payload = JSON.stringify(items);
   try {
-    window.localStorage.setItem(STORAGE_CART_KEY, JSON.stringify(items));
+    window.localStorage.setItem(STORAGE_CART_KEY, payload);
+    return true;
   } catch {
-    // ignore
+    try {
+      window.sessionStorage.setItem(STORAGE_CART_KEY, payload);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

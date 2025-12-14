@@ -114,10 +114,31 @@ function quoteLabel(quoteUsd: number | null) {
   return `$${formatUsd(quoteUsd)}`;
 }
 
+function getWritableStorage(): Storage | null {
+  if (typeof window === "undefined") return null;
+  const testKey = "__uootd_storage_test__";
+  try {
+    window.localStorage.setItem(testKey, "1");
+    window.localStorage.removeItem(testKey);
+    return window.localStorage;
+  } catch {
+    // ignore
+  }
+  try {
+    window.sessionStorage.setItem(testKey, "1");
+    window.sessionStorage.removeItem(testKey);
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
 function loadCart(): CartItem[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_CART_KEY);
+    const primary = window.localStorage.getItem(STORAGE_CART_KEY);
+    const fallback = window.sessionStorage.getItem(STORAGE_CART_KEY);
+    const raw = primary || fallback;
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -138,8 +159,11 @@ function loadCart(): CartItem[] {
 
 function saveCart(items: CartItem[]) {
   if (typeof window === "undefined") return;
+  const payload = JSON.stringify(items);
+  const storage = getWritableStorage();
+  if (!storage) return false;
   try {
-    window.localStorage.setItem(STORAGE_CART_KEY, JSON.stringify(items));
+    storage.setItem(STORAGE_CART_KEY, payload);
     return true;
   } catch {
     return false;
