@@ -92,6 +92,16 @@ function safeJsonParse<T>(raw: string | undefined): T | null {
   }
 }
 
+function toNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const cleaned = value.replace(/[^0-9.]/g, "");
+    const num = Number(cleaned);
+    return Number.isFinite(num) ? num : null;
+  }
+  return null;
+}
+
 async function fetchDetection(
   imageUrl: string,
   requestedCategory: Category,
@@ -172,14 +182,22 @@ export async function POST(request: Request) {
 
   const detection = {
     productName: geminiDetection?.product_name || payload.description || "Detected item",
-    detectedMsrpUsd:
-      typeof geminiDetection?.detected_msrp_usd === "number"
-        ? geminiDetection.detected_msrp_usd
-        : requestedCategory === "FOOTWEAR"
-          ? 780
-          : requestedCategory === "BAG"
-            ? 980
-            : 2400,
+    detectedMsrpUsd: (() => {
+      const mg: Record<string, unknown> =
+        geminiDetection && typeof geminiDetection === "object" ? geminiDetection : {};
+      const candidate =
+        toNumber(geminiDetection?.detected_msrp_usd) ||
+        toNumber(mg.msrp) ||
+        toNumber(mg.msrp_usd) ||
+        toNumber(mg.price_usd) ||
+        toNumber(mg.price);
+      if (candidate !== null) return candidate;
+      return requestedCategory === "FOOTWEAR"
+        ? 780
+        : requestedCategory === "BAG"
+          ? 980
+          : 2400;
+    })(),
     description:
       (typeof geminiDetection?.description === "string" && geminiDetection.description.trim()) ||
       (typeof payload.description === "string" && payload.description.trim()) ||
