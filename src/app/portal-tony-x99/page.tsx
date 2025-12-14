@@ -1,36 +1,24 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 
-type AdminQuote = {
+type LeadRow = {
   id: string;
-  category: string;
-  msrpUsd: number;
-  insiderPrice: number;
+  createdAt: string;
+  quoteId?: string;
+  category?: string;
+  productName?: string;
+  detectedMsrpUsd?: number | null;
+  quoteUsd?: number | null;
+  status?: string;
   paypal: string;
   whatsapp: string;
+  size?: string;
+  note?: string;
+  imageUrl?: string;
 };
-
-const adminQuotes: AdminQuote[] = [
-  {
-    id: "Q-5941",
-    category: "FOOTWEAR",
-    msrpUsd: 780,
-    insiderPrice: 195,
-    paypal: "vipbuyer@example.com",
-    whatsapp: "+19170000000",
-  },
-  {
-    id: "Q-4220",
-    category: "BAG",
-    msrpUsd: 980,
-    insiderPrice: 245,
-    paypal: "baglover@example.com",
-    whatsapp: "+351900000000",
-  },
-];
 
 function formatUsd(value: number) {
   return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
@@ -42,6 +30,8 @@ export default function AdminPortal() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [leads, setLeads] = useState<LeadRow[]>([]);
+  const [loadingLeads, setLoadingLeads] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/session")
@@ -51,6 +41,33 @@ export default function AdminPortal() {
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!loggedIn) return;
+    void loadLeads();
+  }, [loggedIn]);
+
+  const loadLeads = async () => {
+    setLoadingLeads(true);
+    try {
+      const res = await fetch("/api/leads");
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Unable to load leads");
+      }
+      const data = await res.json();
+      if (Array.isArray(data?.leads)) {
+        setLeads(data.leads);
+      } else {
+        setLeads([]);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to load leads";
+      setError(message);
+    } finally {
+      setLoadingLeads(false);
+    }
+  };
 
   const handleLogin = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -66,6 +83,7 @@ export default function AdminPortal() {
           throw new Error(data?.error || "Login failed");
         }
         setLoggedIn(true);
+        void loadLeads();
       })
       .catch((err) => setError(err.message));
   };
@@ -92,11 +110,11 @@ export default function AdminPortal() {
       </div>
 
       {!loggedIn ? (
-          <form
-            onSubmit={handleLogin}
-            className="glass-card grid gap-3 rounded-3xl p-6 sm:grid-cols-2"
-          >
-            <div className="sm:col-span-2">
+        <form
+          onSubmit={handleLogin}
+          className="glass-card grid gap-3 rounded-3xl p-6 sm:grid-cols-2"
+        >
+          <div className="sm:col-span-2">
             <p className="text-xs uppercase tracking-[0.2em] text-[#7b6848]">
               Dual Factor Login
             </p>
@@ -126,7 +144,7 @@ export default function AdminPortal() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="rounded-2xl border border-black/10 bg-white/80 px-4 py-3 text-sm shadow-inner focus:border-[#d4af37] focus:outline-none"
-              placeholder="••••••••"
+              placeholder="Strong admin password"
               required
             />
           </div>
@@ -169,55 +187,95 @@ export default function AdminPortal() {
             </Link>
           </div>
           <div className="mt-4 overflow-hidden rounded-2xl border border-black/10">
+            <div className="flex items-center justify-between bg-white/70 px-4 py-2 text-xs text-[#5c5345]">
+              <span>Live leads submitted from the upload flow.</span>
+              {loadingLeads ? <span>Refreshing…</span> : null}
+            </div>
             <table className="w-full border-separate border-spacing-0 text-sm">
               <thead className="bg-black text-[#fef7d2]">
                 <tr>
                   <th className="px-3 py-2 text-left">Quote</th>
                   <th className="px-3 py-2 text-left">Category</th>
                   <th className="px-3 py-2 text-left">MSRP</th>
-                  <th className="px-3 py-2 text-left">Insider</th>
-                  <th className="px-3 py-2 text-left">PayPal</th>
-                  <th className="px-3 py-2 text-left">WhatsApp</th>
+                  <th className="px-3 py-2 text-left">Quote</th>
+                  <th className="px-3 py-2 text-left">Contact</th>
+                  <th className="px-3 py-2 text-left">Notes</th>
                   <th className="px-3 py-2 text-left">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {adminQuotes.map((q, idx) => (
+                {leads.length === 0 ? (
+                  <tr className="bg-white/60">
+                    <td className="px-3 py-3 text-sm text-[#5c5345]" colSpan={7}>
+                      {loadingLeads
+                        ? "Loading leads..."
+                        : "No live leads yet. Once a client submits the form, it will appear here."}
+                    </td>
+                  </tr>
+                ) : null}
+                {leads.map((lead, idx) => (
                   <tr
-                    key={q.id}
+                    key={lead.id}
                     className={idx % 2 ? "bg-white/70" : "bg-white/50"}
                   >
                     <td className="px-3 py-2 font-semibold text-[var(--ink)]">
-                      {q.id}
+                      {lead.quoteId || lead.id}
+                      <div className="text-[11px] font-normal text-[#5c5345]">
+                        {new Date(lead.createdAt).toLocaleString()}
+                      </div>
                     </td>
-                    <td className="px-3 py-2 text-[#5c5345]">{q.category}</td>
                     <td className="px-3 py-2 text-[#5c5345]">
-                      ${formatUsd(q.msrpUsd)}
+                      <div className="font-semibold text-[var(--ink)]">
+                        {lead.category || "—"}
+                      </div>
+                      <div className="text-[11px]">{lead.productName || lead.status || "—"}</div>
+                    </td>
+                    <td className="px-3 py-2 text-[#5c5345]">
+                      {lead.detectedMsrpUsd
+                        ? `$${formatUsd(lead.detectedMsrpUsd)}`
+                        : "—"}
                     </td>
                     <td className="px-3 py-2 text-[var(--ink)]">
-                      ${formatUsd(q.insiderPrice)}
+                      {typeof lead.quoteUsd === "number"
+                        ? `$${formatUsd(lead.quoteUsd)}`
+                        : lead.quoteUsd === null
+                        ? "VIP review"
+                        : "—"}
                     </td>
-                    <td className="px-3 py-2 text-[#5c5345]">{q.paypal}</td>
-                    <td className="px-3 py-2 text-[#5c5345]">{q.whatsapp}</td>
+                    <td className="px-3 py-2 text-[#5c5345]">
+                      <div>{lead.paypal}</div>
+                      <div className="text-[11px]">{lead.whatsapp}</div>
+                    </td>
+                    <td className="px-3 py-2 text-[#5c5345]">
+                      {lead.size ? <div>Size: {lead.size}</div> : null}
+                      {lead.note ? <div className="text-[11px]">{lead.note}</div> : null}
+                    </td>
                     <td className="px-3 py-2">
                       <div className="flex flex-wrap gap-1">
                         <button
                           className="outline-button rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]"
-                          onClick={() => copyValue(q.paypal)}
+                          onClick={() => copyValue(lead.paypal)}
                         >
                           Copy PayPal
                         </button>
                         <a
                           className="outline-button rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]"
-                          href={`https://wa.me/${q.whatsapp.replace(/[^\d+]/g, "")}`}
+                          href={`https://wa.me/${lead.whatsapp.replace(/[^\d+]/g, "")}`}
                           target="_blank"
                           rel="noreferrer"
                         >
                           WhatsApp
                         </a>
-                        <button className="outline-button rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]">
-                          Edit Price
-                        </button>
+                        {lead.imageUrl ? (
+                          <a
+                            className="outline-button rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]"
+                            href={lead.imageUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            View Image
+                          </a>
+                        ) : null}
                       </div>
                     </td>
                   </tr>
