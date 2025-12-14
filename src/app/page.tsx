@@ -491,7 +491,7 @@ export default function Home() {
     });
   };
 
-  const handleLeadSubmit = async () => {
+  const submitLead = async () => {
     setError(null);
 
     if (!lead.paypal || !lead.whatsapp) {
@@ -517,6 +517,10 @@ export default function Home() {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const handleLeadSubmit = async () => {
+    await submitLead();
 
     const link = buildWhatsAppLink();
     // On mobile, use same-tab navigation to avoid popup blockers / about:blank issues.
@@ -526,11 +530,8 @@ export default function Home() {
     setLeadOpen(false);
   };
 
-  const handleEmailFallback = () => {
-    if (!lead.paypal || !lead.whatsapp) {
-      setError("PayPal email and WhatsApp are required.");
-      return;
-    }
+  const handleEmailFallback = async () => {
+    await submitLead();
     const link = buildEmailLink();
     if (typeof window !== "undefined") {
       window.open(link, "_blank");
