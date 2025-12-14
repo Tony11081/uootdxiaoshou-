@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { checkEmail, createSession, verifyPassword, verifyTotp } from "@/server/auth";
+import { checkEmail, sessionCookie, signSession, verifyPassword, verifyTotp } from "@/server/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +25,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    await createSession({ email, role: "admin" });
+    const jwt = await signSession({ email, role: "admin" });
+    const res = NextResponse.json({ ok: true });
+    res.cookies.set(sessionCookie(jwt));
     console.info(`Login success for ${email} from ${ip}`);
-    return NextResponse.json({ ok: true });
+    return res;
   } catch (err) {
     console.error("Login error", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

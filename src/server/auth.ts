@@ -36,42 +36,33 @@ export function checkEmail(email: string) {
   return email.trim().toLowerCase() === adminEmail.trim().toLowerCase();
 }
 
-export async function createSession(user: UserSession) {
+export async function signSession(user: UserSession) {
   const payload = {
     email: user.email,
     role: user.role,
   };
-  const jwt = await new SignJWT(payload)
+  return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${SESSION_TTL_SECONDS}s`)
     .sign(jwtSecret());
+}
 
-  cookies().set({
+export function sessionCookie(jwt: string, maxAge = SESSION_TTL_SECONDS) {
+  return {
     name: COOKIE_NAME,
     value: jwt,
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "lax" as const,
     secure: true,
     path: "/",
-    maxAge: SESSION_TTL_SECONDS,
-  });
-}
-
-export async function clearSession() {
-  cookies().set({
-    name: COOKIE_NAME,
-    value: "",
-    httpOnly: true,
-    sameSite: "lax",
-    secure: true,
-    path: "/",
-    maxAge: 0,
-  });
+    maxAge,
+  };
 }
 
 export async function getSession(): Promise<UserSession | null> {
-  const token = cookies().get(COOKIE_NAME)?.value;
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COOKIE_NAME)?.value;
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, jwtSecret());
