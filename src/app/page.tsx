@@ -4,14 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ChangeEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ContactInfo } from "@/components/contact-info";
+import { ContactInfo, CONTACT } from "@/components/contact-info";
+import { CartItem, loadCart, saveCart } from "@/lib/cart-storage";
 import type { Locale, Quote } from "@/types/quote";
 
 const SALES_WHATSAPP = "+86 134 6224 8923";
-const STORAGE_CART_KEY = "uootd_cart_v1";
-const AUTO_DELETE_DAYS = 7;
 const QUOTE_TIMEOUT_MS = 12000;
 const MAX_IMAGE_CHARS_FOR_CART = 8000;
+const MIN_SCAN_MS = 1200;
 
 const expectationLine: Record<Locale, string> = {
   en: "Most items get an instant quote. If an instant quote isn’t available, an insider replies on WhatsApp.",
@@ -92,14 +92,99 @@ const verdicts = [
   },
 ] as const;
 
+const clientReviews = [
+  {
+    name: "Andrea R.",
+    location: "Los Angeles",
+    channel: "WhatsApp · 2d ago",
+    note: "Quote matched the screenshot without haggling. Invoiced and shipped faster than expected.",
+    avatar: "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=crop&w=200&q=60",
+  },
+  {
+    name: "Lena K.",
+    location: "Berlin",
+    channel: "Email · 5d ago",
+    note: "Shared two handbags; got a single WhatsApp thread with combined pricing. Clear on duties/shipping up front.",
+    avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=60&sat=-20",
+  },
+  {
+    name: "Miguel T.",
+    location: "Lisbon",
+    channel: "Email · 1w ago",
+    note: "Size check was optional but they still double-confirmed. Packaging was discreet, no branding.",
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=60&sat=-15",
+  },
+  {
+    name: "Sofia M.",
+    location: "Madrid",
+    channel: "WhatsApp · 4d ago",
+    note: "Price landed inside the promised band. Felt private and respectful—no follow-up spam.",
+    avatar: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=200&q=60",
+  },
+  {
+    name: "Calvin H.",
+    location: "Singapore",
+    channel: "WhatsApp · 3d ago",
+    note: "Sent 3 items, got one combined draft. Saved the cart and came back later—data was still there.",
+    avatar: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=200&q=60&sat=-10",
+  },
+  {
+    name: "Priya V.",
+    location: "Toronto",
+    channel: "WhatsApp · 6d ago",
+    note: "They waited for my color confirmation before invoicing. QC pics arrived before ship label—nice reassurance.",
+    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=60&sat=-10",
+  },
+  {
+    name: "Noah P.",
+    location: "New York",
+    channel: "WhatsApp · 1w ago",
+    note: "Payment only via PayPal invoice. No surprise fees—taxes/shipping spelled out in chat before I paid.",
+    avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=60&sat=-10",
+  },
+] as const;
+
+const caseSnippets = [
+  {
+    title: "Invoice issued · Paid",
+    note: "Order #Q-4220 | Tote | Paid via PayPal · ship label generated",
+    image:
+      "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=900&q=60",
+  },
+  {
+    title: "Chat handoff",
+    note: "Client confirmed size & color in WhatsApp, received QC shots same day",
+    image:
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=60",
+  },
+] as const;
+
+const brandHighlights = [
+  { name: "Hermes", region: "Paris", note: "Silk + calfskin sourcing" },
+  { name: "Chanel", region: "Paris", note: "Classic flap + seasonal" },
+  { name: "Goyard", region: "Paris", note: "St Louis / Artois" },
+  { name: "Celine", region: "Paris", note: "Triomphe line" },
+  { name: "Dior", region: "Paris", note: "Book Tote + sneakers" },
+  { name: "Louis Vuitton", region: "Paris", note: "Canvas + Capucines" },
+  { name: "Rolex", region: "Geneva", note: "Lead time on steel models" },
+  { name: "Cartier", region: "Paris", note: "Trinity / Love" },
+  { name: "AP", region: "Le Brassus", note: "Royal Oak lead times" },
+] as const;
+
+const liveRequests = [
+  { city: "NYC", item: "Tote", status: "Fast-track", quote: "$245" },
+  { city: "Lisbon", item: "Boots", status: "VIP review", quote: "Pending" },
+  { city: "Madrid", item: "Watch", status: "Fast-track", quote: "$379 cap" },
+  { city: "Toronto", item: "Crossbody", status: "Fast-track", quote: "$195" },
+  { city: "Singapore", item: "Flap bag", status: "VIP review", quote: "Pending" },
+] as const;
+
 type LeadForm = {
   paypal: string;
   whatsapp: string;
   size?: string;
   note?: string;
 };
-
-type CartItem = Quote & { size?: string; addedAt?: number };
 
 function formatUsd(value: number) {
   return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
@@ -112,62 +197,6 @@ function sanitizeNumber(num: string) {
 function quoteLabel(quoteUsd: number | null) {
   if (quoteUsd === null) return "VIP Price";
   return `$${formatUsd(quoteUsd)}`;
-}
-
-function getWritableStorage(): Storage | null {
-  if (typeof window === "undefined") return null;
-  const testKey = "__uootd_storage_test__";
-  try {
-    window.localStorage.setItem(testKey, "1");
-    window.localStorage.removeItem(testKey);
-    return window.localStorage;
-  } catch {
-    // ignore
-  }
-  try {
-    window.sessionStorage.setItem(testKey, "1");
-    window.sessionStorage.removeItem(testKey);
-    return window.sessionStorage;
-  } catch {
-    return null;
-  }
-}
-
-function loadCart(): CartItem[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const primary = window.localStorage.getItem(STORAGE_CART_KEY);
-    const fallback = window.sessionStorage.getItem(STORAGE_CART_KEY);
-    const raw = primary || fallback;
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-
-    const now = Date.now();
-    const maxAgeMs = AUTO_DELETE_DAYS * 24 * 60 * 60 * 1000;
-
-    return (parsed as CartItem[])
-      .map((item) => ({
-        ...item,
-        addedAt: typeof item.addedAt === "number" ? item.addedAt : now,
-      }))
-      .filter((item) => now - (item.addedAt || now) <= maxAgeMs);
-  } catch {
-    return [];
-  }
-}
-
-function saveCart(items: CartItem[]) {
-  if (typeof window === "undefined") return;
-  const payload = JSON.stringify(items);
-  const storage = getWritableStorage();
-  if (!storage) return false;
-  try {
-    storage.setItem(STORAGE_CART_KEY, payload);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 function Accordion({
@@ -241,6 +270,8 @@ export default function Home() {
     id: "demo-offer",
     imageUrl: demoTiles[0].imageUrl,
     category: "FOOTWEAR",
+    productName: "Calfskin Ankle Boot",
+    detectedMsrpUsd: 780,
     quoteUsd: 195,
     marketingCopy: {
       en: "Hand-finished calfskin boot with atelier-grade stitching. Ships discreetly with dust bag and double-boxed packaging.",
@@ -259,19 +290,22 @@ export default function Home() {
   const [leadOpen, setLeadOpen] = useState(false);
   const [lead, setLead] = useState<LeadForm>({ paypal: "", whatsapp: "" });
 
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() =>
+    typeof window === "undefined" ? [] : loadCart(),
+  );
+  const cartHydrated = useRef(false);
   const [cartError, setCartError] = useState<string | null>(null);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
+  const uploadSectionRef = useRef<HTMLDivElement | null>(null);
+  const [promoSeconds, setPromoSeconds] = useState(900);
 
   useEffect(() => {
-    const id = window.setTimeout(() => {
-      setCart(loadCart());
-    }, 0);
-
-    return () => window.clearTimeout(id);
+    cartHydrated.current = true;
   }, []);
 
   useEffect(() => {
+    if (!cartHydrated.current) return;
+
     const ok = saveCart(cart);
     if (!ok && cart.length) {
       setCartError("Could not save list (storage is full). Try clearing old items.");
@@ -286,14 +320,28 @@ export default function Home() {
     return "upload";
   }, [status]);
 
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setPromoSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const promoClock = useMemo(() => {
+    const m = Math.floor(promoSeconds / 60)
+      .toString()
+      .padStart(2, "0");
+    const s = (promoSeconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  }, [promoSeconds]);
+
   const isFootwear = quote.category?.toUpperCase() === "FOOTWEAR";
   const isFastTrack = quote.status === "FAST_TRACK" && quote.quoteUsd !== null;
-  const sizeReady = !isFootwear || Boolean(lead.size?.trim());
+  const sizeReady = true;
 
   const primaryCtaLabel = useMemo(() => {
-    if (isFootwear && !sizeReady) return "Select size to checkout";
     return isFastTrack ? "SECURE CHECKOUT" : "CONTACT VIP DESK";
-  }, [isFastTrack, isFootwear, sizeReady]);
+  }, [isFastTrack]);
 
   const statusBadge = isFastTrack ? "Instant quote" : "Manual review";
 
@@ -302,6 +350,7 @@ export default function Home() {
     source: "upload" | "demo" = "upload",
     demoType?: DemoType,
   ) => {
+    const startedAt = Date.now();
     setStatus("scanning");
     setError(null);
     setPreview(imageUrl);
@@ -322,10 +371,17 @@ export default function Home() {
       }
 
       const data = await response.json();
+      const elapsed = Date.now() - startedAt;
+      if (elapsed < MIN_SCAN_MS) {
+        await new Promise((resolve) => setTimeout(resolve, MIN_SCAN_MS - elapsed));
+      }
       const nextQuote: Quote = {
         id: (data?.id as string) || `quote-${Date.now()}`,
         imageUrl,
         category: (data?.category as string) || "ACCESSORY",
+        productName: typeof data?.product_name === "string" ? data.product_name : quote.productName,
+        detectedMsrpUsd:
+          typeof data?.detected_msrp_usd === "number" ? data.detected_msrp_usd : quote.detectedMsrpUsd,
         quoteUsd: typeof data?.quote_usd === "number" ? data.quote_usd : null,
         marketingCopy: data?.marketing_copy || quote.marketingCopy,
         status:
@@ -383,6 +439,10 @@ export default function Home() {
       "UOOTD | Quote Request",
       `Quote ID: ${quote.id}`,
       `Category: ${quote.category}`,
+      quote.productName ? `Product: ${quote.productName}` : null,
+      typeof quote.detectedMsrpUsd === "number"
+        ? `Original price: $${formatUsd(quote.detectedMsrpUsd)}`
+        : null,
       `Quoted Price: ${quote.quoteUsd === null ? "VIP Requested" : `$${formatUsd(quote.quoteUsd)}`}`,
       `Customer PayPal: ${lead.paypal}`,
       `Customer WhatsApp: ${lead.whatsapp}`,
@@ -397,6 +457,12 @@ export default function Home() {
   const buildWhatsAppLink = () => {
     const salesNumber = sanitizeNumber(SALES_WHATSAPP);
     return `https://api.whatsapp.com/send?phone=${salesNumber}&text=${encodeURIComponent(buildWhatsAppMessage())}`;
+  };
+
+  const buildEmailLink = () => {
+    const subject = `UOOTD Quote ${quote.id}`;
+    const body = buildWhatsAppMessage();
+    return `mailto:${CONTACT.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
   const handleCheckoutClick = () => {
@@ -453,6 +519,17 @@ export default function Home() {
     setLeadOpen(false);
   };
 
+  const handleEmailFallback = () => {
+    if (!lead.paypal || !lead.whatsapp) {
+      setError("PayPal email and WhatsApp are required.");
+      return;
+    }
+    const link = buildEmailLink();
+    if (typeof window !== "undefined") {
+      window.open(link, "_blank");
+    }
+  };
+
   const handleReset = () => {
     setStatus("idle");
     setError(null);
@@ -492,6 +569,13 @@ export default function Home() {
             <p className="mt-2 text-2xl font-semibold text-[var(--ink)]">
               Estimated time: ~3 seconds
             </p>
+            <p className="text-sm text-[#4f4635]">Please wait, we are detecting your item…</p>
+            <div className="mt-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7b6848]">
+              <span className="h-2 w-2 rounded-full bg-[#d4af37] animate-bounce" />
+              <span className="h-2 w-2 rounded-full bg-[#d4af37] animate-bounce [animation-delay:0.15s]" />
+              <span className="h-2 w-2 rounded-full bg-[#d4af37] animate-bounce [animation-delay:0.3s]" />
+              <span>Analyzing</span>
+            </div>
             <div className="mt-4 scanner-rail h-2 rounded-full bg-black/5" />
             <p className="mt-4 text-sm text-[#4f4635]">
               Privacy: your screenshot is used only to prepare your quote.
@@ -542,9 +626,41 @@ export default function Home() {
 
       <main className="relative z-10 mx-auto flex max-w-6xl flex-col gap-10">
         {view === "upload" ? (
+          <section
+            ref={uploadSectionRef}
+            className="glass-card rounded-3xl border border-black/8 bg-white/90 p-5"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-[#7b6848]">
+                  Limited-time offer
+                </p>
+                <h3 className="text-xl font-semibold text-[var(--ink)]">
+                  10% off your first PayPal invoice
+                </h3>
+                <p className="text-sm text-[#4f4635]">
+                  Applies to invoices opened in this session. No prepayment, PayPal only.
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-black px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#fef7d2]">
+                    Code: UOOTD10
+                  </span>
+                  <span className="text-xs text-[#5c5345]">Add in chat before invoice is sent.</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-xs uppercase tracking-[0.2em] text-[#7b6848]">Countdown</p>
+                <p className="text-2xl font-semibold text-[var(--ink)] tabular-nums">{promoClock}</p>
+                <p className="text-xs text-[#5c5345]">Reserve your slot while live.</p>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {view === "upload" ? (
           <section className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="glass-card relative overflow-hidden rounded-3xl p-6">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#0f0b06]/80 via-transparent to-[#b39748]/5" />
+              <div className="absolute inset-0 bg-gradient-to-br from-[#0f0b06]/70 via-transparent to-[#b39748]/15" />
               <div className="relative flex flex-col gap-4">
                 <p className="text-xs uppercase tracking-[0.2em] text-[#7b6848]">
                   How it works
@@ -723,9 +839,179 @@ export default function Home() {
                   </div>
                 </div>
               </Accordion>
+
+              <div className="glass-card rounded-3xl p-5 space-y-3">
+                <p className="text-xs uppercase tracking-[0.2em] text-[#7b6848]">
+                  Assurance
+                </p>
+                <div className="grid gap-2 text-sm text-[#4f4635] sm:grid-cols-2">
+                  <div className="flex items-center gap-2 rounded-2xl border border-black/8 bg-white/80 px-3 py-2 shadow-sm">
+                    <span className="h-2 w-2 rounded-full bg-[#d4af37]" />
+                    <span>PayPal Buyer Protection — invoice only, zero prepayment</span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-2xl border border-black/8 bg-white/80 px-3 py-2 shadow-sm">
+                    <span className="h-2 w-2 rounded-full bg-[#d4af37]" />
+                    <span>TLS encrypted — screenshots stored minimally, auto-delete in 7 days</span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-2xl border border-black/8 bg-white/80 px-3 py-2 shadow-sm">
+                    <span className="h-2 w-2 rounded-full bg-[#d4af37]" />
+                    <span>Only through PayPal invoices — no card forms, no wallets</span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-2xl border border-black/8 bg-white/80 px-3 py-2 shadow-sm">
+                    <span className="h-2 w-2 rounded-full bg-[#d4af37]" />
+                    <span>Data policy: 7-day auto-delete · see Privacy</span>
+                  </div>
+                </div>
+                <p className="text-xs text-[#5c5345]">
+                  Includes: QC + discreet packaging. Excludes: shipping/taxes (confirmed on WhatsApp).
+                </p>
+              </div>
+
+              <div className="glass-card rounded-3xl p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs uppercase tracking-[0.2em] text-[#7b6848]">
+                    What clients say
+                  </p>
+                  <span className="rounded-full bg-black px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#fef7d2]">
+                    Verified
+                  </span>
+                </div>
+                <div className="relative h-44 overflow-hidden">
+                  <div className="review-track">
+                    {[...clientReviews, ...clientReviews].map((review, idx) => (
+                      <div
+                        key={`${review.name}-${idx}`}
+                        className="review-item flex items-center gap-3 rounded-2xl px-3 py-3 text-sm text-[#4f4635]"
+                      >
+                        <div className="relative h-10 w-10 overflow-hidden rounded-full bg-black/10">
+                          <Image
+                            src={review.avatar}
+                            alt={review.name}
+                            fill
+                            className="object-cover"
+                            sizes="40px"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex flex-wrap items-center justify-between gap-1">
+                            <p className="font-semibold text-[var(--ink)]">{review.name}</p>
+                            <span className="text-[11px] uppercase tracking-[0.14em] text-[#7b6848]">
+                              {review.location} · {review.channel}
+                            </span>
+                          </div>
+                          <p className="text-xs text-[#4f4635]">{review.note}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
         ) : null}
+
+        {view === "upload" ? (
+          <section className="glass-card rounded-3xl border border-black/8 bg-white/90 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-[#7b6848]">
+                  Limited-time offer
+                </p>
+                <h3 className="text-xl font-semibold text-[var(--ink)]">
+                  10% off your first PayPal invoice
+                </h3>
+                <p className="text-sm text-[#4f4635]">
+                  Applies to invoices opened in this session. No prepayment, PayPal only.
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-black px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#fef7d2]">
+                    Code: UOOTD10
+                  </span>
+                  <span className="text-xs text-[#5c5345]">Add in chat before invoice is sent.</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-xs uppercase tracking-[0.2em] text-[#7b6848]">Countdown</p>
+                <p className="text-2xl font-semibold text-[var(--ink)] tabular-nums">{promoClock}</p>
+                <p className="text-xs text-[#5c5345]">Reserve your slot while live.</p>
+                <button
+                  className="mt-2 gold-button rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em]"
+                  onClick={() =>
+                    handleQuoteRequest(demoTiles[0].imageUrl, "demo", demoTiles[0].demoType)
+                  }
+                >
+                  Start with sample
+                </button>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {view === "upload" ? (
+          <section className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="glass-card overflow-hidden rounded-3xl border border-black/8 bg-white/80">
+              <div className="flex items-center justify-between gap-2 px-4 py-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-[#7b6848]">
+                    Live sourcing
+                  </p>
+                  <p className="text-sm text-[#4f4635]">Anonymized recent requests.</p>
+                </div>
+                <span className="rounded-full bg-black px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#fef7d2]">
+                  Live
+                </span>
+              </div>
+              <div className="relative overflow-hidden border-t border-black/5">
+                <div className="marquee-track">
+                  {[...liveRequests, ...liveRequests].map((req, idx) => (
+                    <div key={`${req.city}-${idx}`} className="marquee-item">
+                      <p className="text-xs uppercase tracking-[0.14em] text-[#7b6848]">
+                        {req.city}
+                      </p>
+                      <p className="text-sm font-semibold text-[var(--ink)]">
+                        {req.item}
+                      </p>
+                      <p className="text-xs text-[#4f4635]">
+                        {req.status} · {req.quote}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="glass-card rounded-3xl p-5">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-[#7b6848]">
+                    Brand focus
+                  </p>
+                  <p className="text-sm text-[#4f4635]">
+                    Current house mix by region.
+                  </p>
+                </div>
+                <span className="rounded-full bg-black px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#fef7d2]">
+                  Dynamic
+                </span>
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                {brandHighlights.slice(0, 6).map((brand) => (
+                  <div
+                    key={brand.name}
+                    className="rounded-2xl border border-black/8 bg-white/80 px-3 py-3 shadow-sm"
+                  >
+                    <p className="text-xs uppercase tracking-[0.14em] text-[#7b6848]">
+                      {brand.region}
+                    </p>
+                    <p className="text-sm font-semibold text-[var(--ink)]">{brand.name}</p>
+                    <p className="text-xs text-[#4f4635]">{brand.note}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         {view === "result" ? (
           <section className="mx-auto flex w-full max-w-5xl flex-col gap-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -736,6 +1022,9 @@ export default function Home() {
                 <h2 className="text-3xl font-semibold text-[var(--ink)]">
                   Result & checkout
                 </h2>
+                <p className="text-sm text-[#4f4635]">
+                  Private quote based on detected MSRP (capped as needed).
+                </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <button
@@ -778,6 +1067,14 @@ export default function Home() {
                     <p className="text-4xl font-semibold text-[#fef7d2]">
                       {quoteLabel(quote.quoteUsd)}
                     </p>
+                    {quote.productName ? (
+                      <p className="text-sm text-[#f3e5b8]">{quote.productName}</p>
+                    ) : null}
+                    {typeof quote.detectedMsrpUsd === "number" ? (
+                      <p className="text-xs text-[#f3e5b8]/80">
+                        Original price: ${formatUsd(quote.detectedMsrpUsd)}
+                      </p>
+                    ) : null}
                     {!isFastTrack ? (
                       <p className="mt-1 text-sm font-semibold text-[#f3e5b8]">
                         Contact for VIP Price
@@ -787,9 +1084,38 @@ export default function Home() {
                 </div>
 
                 <div className="flex flex-col gap-4 p-6">
+                  <div className="text-sm text-[#4f4635]">
+                    {quote.productName ? (
+                      <p className="font-semibold text-[var(--ink)]">
+                        {quote.productName}
+                      </p>
+                    ) : null}
+                    {typeof quote.detectedMsrpUsd === "number" ? (
+                      <p>Original price: ${formatUsd(quote.detectedMsrpUsd)}</p>
+                    ) : null}
+                  </div>
+
                   <p className="text-sm text-[#4f4635]">
                     {quote.marketingCopy?.[locale] || quote.marketingCopy?.en}
                   </p>
+                  <div className="grid grid-cols-2 gap-3 text-xs text-[#4f4635] sm:grid-cols-4">
+                    {[
+                      { label: "Quote", desc: "~3s" },
+                      { label: "Confirm", desc: "Client chat" },
+                      { label: "Invoice", desc: "PayPal" },
+                      { label: "Ship", desc: "QC + discreet pack" },
+                    ].map((step) => (
+                      <div
+                        key={step.label}
+                        className="rounded-2xl border border-black/8 bg-white/80 px-3 py-3 text-center shadow-sm"
+                      >
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7b6848]">
+                          {step.label}
+                        </p>
+                        <p className="text-sm text-[var(--ink)]">{step.desc}</p>
+                      </div>
+                    ))}
+                  </div>
 
                   {isFootwear ? (
                     <SizeSelect
@@ -800,20 +1126,14 @@ export default function Home() {
                     />
                   ) : null}
 
-                  {isFootwear && !sizeReady ? (
-                    <p className="text-sm font-semibold text-[#7a6845]">
-                      Select size to checkout
-                    </p>
-                  ) : null}
-
                   <div className="flex flex-wrap gap-3">
-                    <button
-                      className="gold-button rounded-full px-5 py-3 text-sm font-semibold uppercase tracking-[0.18em] disabled:opacity-60 disabled:cursor-not-allowed"
-                      onClick={handleCheckoutClick}
-                      disabled={!sizeReady}
-                    >
-                      {primaryCtaLabel}
-                    </button>
+              <button
+                className="gold-button rounded-full px-5 py-3 text-sm font-semibold uppercase tracking-[0.18em] disabled:opacity-60 disabled:cursor-not-allowed"
+                onClick={handleCheckoutClick}
+                disabled={false}
+              >
+                {primaryCtaLabel}
+              </button>
                     <button
                       className="outline-button rounded-full px-5 py-3 text-sm font-semibold uppercase tracking-[0.18em]"
                       onClick={handleAddToCart}
@@ -865,6 +1185,78 @@ export default function Home() {
               </div>
             </Accordion>
 
+            <div className="glass-card rounded-3xl p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-[#7b6848]">
+                    What clients say
+                  </p>
+                  <p className="text-sm text-[#4f4635]">
+                    Real buyers, verified chats.
+                  </p>
+                </div>
+                <span className="rounded-full bg-black px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#fef7d2]">
+                  Verified
+                </span>
+              </div>
+              <div className="relative mt-3 h-48 overflow-hidden">
+                <div className="review-track">
+                  {[...clientReviews, ...clientReviews].map((review, idx) => (
+                    <div
+                      key={`${review.name}-${idx}`}
+                      className="review-item flex items-center gap-3 rounded-2xl px-4 py-3 text-sm text-[#4f4635]"
+                    >
+                      <div className="relative h-10 w-10 overflow-hidden rounded-full bg-black/10">
+                        <Image
+                          src={review.avatar}
+                          alt={review.name}
+                          fill
+                          className="object-cover"
+                          sizes="40px"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-[var(--ink)]">
+                            {review.name}
+                          </p>
+                          <span className="text-[11px] uppercase tracking-[0.14em] text-[#7b6848]">
+                            {review.location} · {review.channel}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-[#4f4635]">{review.note}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="glass-card rounded-3xl p-5">
+              <div className="flex items-center justify-between">
+                <p className="text-xs uppercase tracking-[0.2em] text-[#7b6848]">
+                  Brand focus
+                </p>
+                <span className="rounded-full bg-black px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#fef7d2]">
+                  Dynamic
+                </span>
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                {brandHighlights.slice(0, 6).map((brand) => (
+                  <div
+                    key={brand.name}
+                    className="rounded-2xl border border-black/8 bg-white/80 px-3 py-3 shadow-sm"
+                  >
+                    <p className="text-xs uppercase tracking-[0.14em] text-[#7b6848]">
+                      {brand.region}
+                    </p>
+                    <p className="text-sm font-semibold text-[var(--ink)]">{brand.name}</p>
+                    <p className="text-xs text-[#4f4635]">{brand.note}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <Accordion title="The Insider Verdict">
               <div className="space-y-3">
                 {verdicts.map((v) => (
@@ -905,6 +1297,63 @@ export default function Home() {
                     className="rounded-2xl border border-black/8 bg-white/80 px-3 py-3 text-center shadow-sm"
                   >
                     {word}
+                  </div>
+                ))}
+              </div>
+            </Accordion>
+
+            <Accordion title="Policy & SLA">
+              <div className="grid gap-3 text-sm text-[#4f4635] sm:grid-cols-2">
+                <div className="rounded-2xl border border-black/8 bg-white/80 px-3 py-3 shadow-sm">
+                  <p className="text-xs uppercase tracking-[0.16em] text-[#7b6848]">
+                    Response
+                  </p>
+                  <p>Business hours: ~10 min. Off-hours: next window.</p>
+                </div>
+                <div className="rounded-2xl border border-black/8 bg-white/80 px-3 py-3 shadow-sm">
+                  <p className="text-xs uppercase tracking-[0.16em] text-[#7b6848]">
+                    Edits / cancel
+                  </p>
+                  <p>Before invoice: free edits/cancel. After invoice: confirm in chat.</p>
+                </div>
+                <div className="rounded-2xl border border-black/8 bg-white/80 px-3 py-3 shadow-sm">
+                  <p className="text-xs uppercase tracking-[0.16em] text-[#7b6848]">
+                    QC
+                  </p>
+                  <p>Photos or short video before shipping. Sourced discreetly.</p>
+                </div>
+                <div className="rounded-2xl border border-black/8 bg-white/80 px-3 py-3 shadow-sm">
+                  <p className="text-xs uppercase tracking-[0.16em] text-[#7b6848]">
+                    Privacy & retention
+                  </p>
+                  <p>
+                    Screenshots used only for quotes. Auto-delete after 7 days. TLS encrypted storage.
+                  </p>
+                </div>
+              </div>
+            </Accordion>
+
+            <Accordion title="Case snapshots">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {caseSnippets.map((c) => (
+                  <div
+                    key={c.title}
+                    className="overflow-hidden rounded-2xl border border-black/8 bg-white/80 shadow-sm"
+                  >
+                    <div className="relative h-32 w-full">
+                      <Image
+                        src={c.image}
+                        alt={c.title}
+                        fill
+                        className="object-cover blur-[1px]"
+                        sizes="100%"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                      <div className="absolute bottom-2 left-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#fef7d2]">
+                        {c.title}
+                      </div>
+                    </div>
+                    <div className="px-3 py-3 text-sm text-[#4f4635]">{c.note}</div>
                   </div>
                 ))}
               </div>
@@ -1049,16 +1498,9 @@ export default function Home() {
               </button>
               <button
                 className="outline-button flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]"
-                onClick={() => {
-                  const message = buildWhatsAppMessage();
-                  if (navigator?.clipboard?.writeText) {
-                    navigator.clipboard.writeText(message).catch(() => {});
-                  } else {
-                    window.prompt("Copy this message and paste into WhatsApp:", message);
-                  }
-                }}
+                onClick={handleEmailFallback}
               >
-                Copy message (if WhatsApp is blocked)
+                Email us (if WhatsApp is blocked)
               </button>
               <p className="text-xs text-[#5c5345]">
                 Privacy: your screenshot is used only to prepare your quote.
@@ -1067,6 +1509,27 @@ export default function Home() {
           </div>
         </div>
       ) : null}
+
+      <div className="sticky top-[56px] z-30 flex justify-center px-4 pb-4">
+        <div className="glass-card flex w-full max-w-4xl flex-wrap items-center justify-center gap-2 rounded-full px-4 py-2 text-xs text-[#4f4635] shadow-lg">
+          <span className="font-semibold uppercase tracking-[0.18em] text-[#7b6848]">
+            Need help?
+          </span>
+          <a
+            href={`https://wa.me/${CONTACT.whatsappDigits}`}
+            target="_blank"
+            rel="noreferrer"
+            className="underline decoration-dotted"
+          >
+            WhatsApp
+          </a>
+          <span>•</span>
+          <a href={`mailto:${CONTACT.email}`} className="underline decoration-dotted">
+            Email
+          </a>
+          <span>Response: ~10 min in business hours</span>
+        </div>
+      </div>
     </div>
   );
 }

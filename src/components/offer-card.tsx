@@ -77,6 +77,16 @@ export function OfferCard({
               ? "Contact for VIP Price"
               : `Quoted Price: $${formatUsd(quote.quoteUsd)}`}
           </h3>
+          {quote.productName ? (
+            <p className="text-base font-semibold text-[var(--ink)]">
+              {quote.productName}
+            </p>
+          ) : null}
+          {typeof quote.detectedMsrpUsd === "number" ? (
+            <p className="text-sm text-[#5c5345]">
+              Original price: ${formatUsd(quote.detectedMsrpUsd)}
+            </p>
+          ) : null}
           <p className="text-sm uppercase tracking-[0.16em] text-[#7a6845]">
             {quote.category}
           </p>
@@ -112,4 +122,3 @@ export function OfferCard({
     </div>
   );
 }
-

@@ -137,3 +137,47 @@ body {
   background: radial-gradient(circle, transparent 35%, rgba(0, 0, 0, 0.32) 95%);
   pointer-events: none;
 }
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee-track {
+  display: flex;
+  width: 200%;
+  animation: marquee 18s linear infinite;
+}
+
+.marquee-item {
+  width: 240px;
+  padding: 12px;
+  border-right: 1px solid rgba(17, 17, 17, 0.06);
+  background: rgba(255, 255, 255, 0.85);
+}
+
+@keyframes marquee-vertical {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+.review-track {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: marquee-vertical 18s linear infinite;
+}
+
+.review-item {
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.06);
+}

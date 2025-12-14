@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist_Mono, Playfair_Display, Sora } from "next/font/google";
 import "./globals.css";
 import { SiteFooter } from "@/components/site-footer";
+import { SiteHeader } from "@/components/site-header";
 
 const sora = Sora({
   variable: "--font-sora",
@@ -44,7 +45,8 @@ export default function RootLayout({
         className={`${sora.variable} ${playfair.variable} ${geistMono.variable} antialiased bg-[var(--paper)] text-[var(--ink)]`}
       >
         <div className="flex min-h-screen flex-col">
-          <div className="flex-1">{children}</div>
+          <SiteHeader />
+          <div className="flex-1 pt-14">{children}</div>
           <SiteFooter />
         </div>
       </body>

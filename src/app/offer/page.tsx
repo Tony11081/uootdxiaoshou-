@@ -11,6 +11,8 @@ const sampleOffer: Quote = {
   imageUrl:
     "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1200&q=80",
   category: "BAG",
+  productName: "Brushed Hardware Tote",
+  detectedMsrpUsd: 980,
   quoteUsd: 245,
   marketingCopy: {
     en: "Vault-finish calfskin tote with brushed hardware and double stitch handles. Ships discreetly with protective dust bag.",

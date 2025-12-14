@@ -1,62 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import type { Quote } from "@/types/quote";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CartItem, loadCart, saveCart } from "@/lib/cart-storage";
 
 const SALES_WHATSAPP = "+8613462248923";
-const STORAGE_CART_KEY = "uootd_cart_v1";
-const AUTO_DELETE_DAYS = 7;
-
-type CartItem = Quote & { size?: string; addedAt?: number };
-
-function loadCart(): CartItem[] {
-  if (typeof window === "undefined") return [];
-  const testKey = "__uootd_storage_test__";
-  try {
-    const primary = window.localStorage.getItem(STORAGE_CART_KEY);
-    const fallback = window.sessionStorage.getItem(STORAGE_CART_KEY);
-    const raw = primary || fallback;
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-
-    const now = Date.now();
-    const maxAgeMs = AUTO_DELETE_DAYS * 24 * 60 * 60 * 1000;
-
-    return (parsed as CartItem[])
-      .map((item) => ({
-        ...item,
-        addedAt: typeof item.addedAt === "number" ? item.addedAt : now,
-      }))
-      .filter((item) => now - (item.addedAt || now) <= maxAgeMs);
-  } catch {
-    // try to verify sessionStorage at least exists
-    try {
-      window.sessionStorage.setItem(testKey, "1");
-      window.sessionStorage.removeItem(testKey);
-    } catch {
-      // ignore
-    }
-    return [];
-  }
-}
-
-function saveCart(items: CartItem[]) {
-  if (typeof window === "undefined") return;
-  const payload = JSON.stringify(items);
-  try {
-    window.localStorage.setItem(STORAGE_CART_KEY, payload);
-    return true;
-  } catch {
-    try {
-      window.sessionStorage.setItem(STORAGE_CART_KEY, payload);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-}
+const FALLBACK_IMAGE =
+  "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=200&q=60";
 
 function sanitizeNumber(num: string) {
   return num.replace(/[^\d]/g, "");
@@ -72,17 +22,17 @@ function quoteLabel(quoteUsd: number | null) {
 }
 
 export default function CartPage() {
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() =>
+    typeof window === "undefined" ? [] : loadCart(),
+  );
+  const hydrated = useRef(false);
 
   useEffect(() => {
-    const id = window.setTimeout(() => {
-      setCart(loadCart());
-    }, 0);
-
-    return () => window.clearTimeout(id);
+    hydrated.current = true;
   }, []);
 
   useEffect(() => {
+    if (!hydrated.current) return;
     saveCart(cart);
   }, [cart]);
 
@@ -146,6 +96,7 @@ export default function CartPage() {
           {cart.map((item) => {
             const isFastTrack =
               item.status === "FAST_TRACK" && item.quoteUsd !== null;
+            const hasImage = Boolean(item.imageUrl);
             return (
               <div
                 key={item.id}
@@ -154,7 +105,7 @@ export default function CartPage() {
                 <div className="h-16 w-16 overflow-hidden rounded-2xl bg-black/5">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={item.imageUrl}
+                    src={hasImage ? item.imageUrl : FALLBACK_IMAGE}
                     alt={item.category}
                     className="h-full w-full object-cover"
                   />
@@ -163,13 +114,23 @@ export default function CartPage() {
                   <p className="text-sm uppercase tracking-[0.16em] text-[#7b6848]">
                     {item.category}
                   </p>
-                  <p className="text-lg font-semibold text-[var(--ink)]">
-                    {quoteLabel(item.quoteUsd)}
+                {item.productName ? (
+                  <p className="text-sm font-semibold text-[var(--ink)]">
+                    {item.productName}
                   </p>
-                  {item.size ? (
-                    <p className="text-xs text-[#5c5345]">Size: {item.size}</p>
-                  ) : null}
-                </div>
+                ) : null}
+                <p className="text-lg font-semibold text-[var(--ink)]">
+                  {quoteLabel(item.quoteUsd)}
+                </p>
+                {typeof item.detectedMsrpUsd === "number" ? (
+                  <p className="text-xs text-[#5c5345]">
+                    Original price: ${formatUsd(item.detectedMsrpUsd)}
+                  </p>
+                ) : null}
+                {item.size ? (
+                  <p className="text-xs text-[#5c5345]">Size: {item.size}</p>
+                ) : null}
+              </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <span
                     className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${

@@ -10,6 +10,8 @@ export interface Quote {
   id: string;
   imageUrl: string;
   category: string;
+  productName?: string;
+  detectedMsrpUsd?: number;
   quoteUsd: number | null;
   marketingCopy: MarketingCopy;
   status: "FAST_TRACK" | "VIP_REVIEW";

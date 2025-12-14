@@ -2,8 +2,8 @@ import "server-only";
 
 export const PRICING_RULES = {
   multiplier: 0.25,
-  autoMinUsd: 90,
-  autoMaxUsd: 250,
+  floorUsd: 135,
+  ceilingUsd: 379,
 } as const;
 
 export type QuoteStatus = "FAST_TRACK" | "VIP_REVIEW";
@@ -11,17 +11,16 @@ export type QuoteStatus = "FAST_TRACK" | "VIP_REVIEW";
 export function computeQuoteFromMsrp(msrpUsd: number): {
   quoteUsd: number;
   status: QuoteStatus;
-  withinAutoBand: boolean;
+  capped: boolean;
 } {
   const safeMsrp = Number.isFinite(msrpUsd) ? msrpUsd : 0;
-  const quoteUsd = Math.round(safeMsrp * PRICING_RULES.multiplier);
-  const withinAutoBand =
-    quoteUsd >= PRICING_RULES.autoMinUsd && quoteUsd <= PRICING_RULES.autoMaxUsd;
+  const rawQuote = safeMsrp * PRICING_RULES.multiplier;
+  const bounded = Math.min(PRICING_RULES.ceilingUsd, Math.max(PRICING_RULES.floorUsd, rawQuote));
+  const quoteUsd = Math.round(bounded);
 
   return {
     quoteUsd,
-    status: withinAutoBand ? "FAST_TRACK" : "VIP_REVIEW",
-    withinAutoBand,
+    status: "FAST_TRACK",
+    capped: quoteUsd !== Math.round(rawQuote),
   };
 }
-
