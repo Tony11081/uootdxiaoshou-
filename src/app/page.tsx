@@ -531,16 +531,6 @@ export default function Home() {
     return true;
   };
 
-  const handleLeadSubmit = () => {
-    if (!captureLead("whatsapp")) return;
-    const link = buildWhatsAppLink();
-    // On mobile, use same-tab navigation to avoid popup blockers / about:blank issues.
-    if (typeof window !== "undefined") {
-      window.location.href = link;
-    }
-    setLeadOpen(false);
-  };
-
   const handleEmailFallback = () => {
     if (!captureLead("email")) return;
     const link = buildEmailLink();
@@ -1509,12 +1499,19 @@ export default function Home() {
                 <p className="text-sm font-semibold text-[#9a3b3b]">{cartError}</p>
               ) : null}
 
-              <button
+              <a
+                href={buildWhatsAppLink()}
                 className="gold-button flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold uppercase tracking-[0.16em]"
-                onClick={handleLeadSubmit}
+                onClick={(e) => {
+                  if (!captureLead("whatsapp")) {
+                    e.preventDefault();
+                    return;
+                  }
+                  setLeadOpen(false);
+                }}
               >
                 Continue in WhatsApp
-              </button>
+              </a>
               <button
                 className="outline-button flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]"
                 onClick={handleEmailFallback}

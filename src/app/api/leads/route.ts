@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { addLead, listLeads } from "@/server/leads-store";
+import { addLead, listLeadsWithSource } from "@/server/leads-store";
 import { getSession } from "@/server/auth";
 
 export const dynamic = "force-dynamic";
@@ -15,8 +15,8 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const leads = await listLeads();
-  return NextResponse.json({ leads });
+  const { leads, source } = await listLeadsWithSource();
+  return NextResponse.json({ leads, source, count: leads.length });
 }
 
 export async function POST(request: Request) {

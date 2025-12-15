@@ -27,23 +27,48 @@ const KV_KEY = "uootd:leads:v1";
 const FS_PRIMARY_DIR = path.join(process.cwd(), "data");
 const FS_FALLBACK_DIR = path.join(os.tmpdir(), "uootd");
 
+function normalizeEnv(value: string | undefined) {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
+function normalizeUrl(value: string | undefined) {
+  const normalized = normalizeEnv(value);
+  if (!normalized) return undefined;
+  if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
+    return normalized;
+  }
+  return `https://${normalized}`;
+}
+
 function kvConfigured() {
-  return Boolean(
-    (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) ||
-      (process.env.UPSTASH_REDIS_REST_URL &&
-        process.env.UPSTASH_REDIS_REST_TOKEN)
-  );
+  const kvUrl = normalizeUrl(process.env.KV_REST_API_URL);
+  const kvToken = normalizeEnv(process.env.KV_REST_API_TOKEN);
+  const upstashUrl = normalizeUrl(process.env.UPSTASH_REDIS_REST_URL);
+  const upstashToken = normalizeEnv(process.env.UPSTASH_REDIS_REST_TOKEN);
+  return Boolean((kvUrl && kvToken) || (upstashUrl && upstashToken));
 }
 
 async function getKv() {
   if (!kvConfigured()) return null;
 
-  if (!process.env.KV_REST_API_URL && process.env.UPSTASH_REDIS_REST_URL) {
-    process.env.KV_REST_API_URL = process.env.UPSTASH_REDIS_REST_URL;
-  }
-  if (!process.env.KV_REST_API_TOKEN && process.env.UPSTASH_REDIS_REST_TOKEN) {
-    process.env.KV_REST_API_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
-  }
+  const url =
+    normalizeUrl(process.env.KV_REST_API_URL) ||
+    normalizeUrl(process.env.UPSTASH_REDIS_REST_URL);
+  const token =
+    normalizeEnv(process.env.KV_REST_API_TOKEN) ||
+    normalizeEnv(process.env.UPSTASH_REDIS_REST_TOKEN);
+
+  if (!url || !token) return null;
+  process.env.KV_REST_API_URL = url;
+  process.env.KV_REST_API_TOKEN = token;
 
   try {
     const { kv } = await import("@vercel/kv");
@@ -132,9 +157,13 @@ export async function addLead(input: LeadInput) {
 
   const kv = await getKv();
   if (kv) {
-    await kv.lpush(KV_KEY, JSON.stringify(record));
-    await kv.ltrim(KV_KEY, 0, MAX_STORED - 1);
-    return record;
+    try {
+      await kv.lpush(KV_KEY, JSON.stringify(record));
+      await kv.ltrim(KV_KEY, 0, MAX_STORED - 1);
+      return record;
+    } catch (err) {
+      console.error("[leads] KV write failed, falling back to FS", err);
+    }
   }
 
   const leads = await readFsLeads();
@@ -143,28 +172,41 @@ export async function addLead(input: LeadInput) {
   return record;
 }
 
-export async function listLeads() {
+export async function listLeadsWithSource() {
   const kv = await getKv();
   if (kv) {
-    const rows = await kv.lrange(KV_KEY, 0, MAX_STORED - 1);
-    const parsed = rows
-      .map((row) => {
-        try {
-          if (typeof row === "string") return JSON.parse(row);
-          if (row && typeof row === "object") return row;
-        } catch {}
-        return null;
-      })
-      .filter(Boolean) as LeadRecord[];
+    try {
+      const rows = await kv.lrange(KV_KEY, 0, MAX_STORED - 1);
+      const parsed = rows
+        .map((row) => {
+          try {
+            if (typeof row === "string") return JSON.parse(row);
+            if (row && typeof row === "object") return row;
+          } catch {}
+          return null;
+        })
+        .filter(Boolean) as LeadRecord[];
 
-    return parsed.sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+      const leads = parsed.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      return { leads, source: "kv" as const };
+    } catch (err) {
+      console.error("[leads] KV read failed, falling back to FS", err);
+    }
   }
 
   const leads = await readFsLeads();
-  return leads.sort(
+  return {
+    leads: leads.sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+    ),
+    source: "fs" as const,
+  };
+}
+
+export async function listLeads() {
+  const { leads } = await listLeadsWithSource();
+  return leads;
 }

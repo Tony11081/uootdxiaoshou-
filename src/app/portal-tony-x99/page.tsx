@@ -33,6 +33,7 @@ export default function AdminPortal() {
   const [error, setError] = useState<string | null>(null);
   const [leads, setLeads] = useState<LeadRow[]>([]);
   const [loadingLeads, setLoadingLeads] = useState(false);
+  const [storeSource, setStoreSource] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/session")
@@ -62,6 +63,7 @@ export default function AdminPortal() {
       } else {
         setLeads([]);
       }
+      setStoreSource(typeof data?.source === "string" ? data.source : null);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to load leads";
       setError(message);
@@ -188,8 +190,11 @@ export default function AdminPortal() {
             </Link>
           </div>
           <div className="mt-4 overflow-hidden rounded-2xl border border-black/10">
-            <div className="flex items-center justify-between bg-white/70 px-4 py-2 text-xs text-[#5c5345]">
-              <span>Live leads submitted from the upload flow.</span>
+          <div className="flex items-center justify-between bg-white/70 px-4 py-2 text-xs text-[#5c5345]">
+              <span>
+                Live leads submitted from the upload flow.
+                {storeSource ? ` (store: ${storeSource})` : ""}
+              </span>
               <div className="flex items-center gap-2">
                 {loadingLeads ? <span>Refreshing…</span> : null}
                 <button
