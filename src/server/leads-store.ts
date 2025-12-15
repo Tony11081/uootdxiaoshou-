@@ -28,11 +28,23 @@ const FS_PRIMARY_DIR = path.join(process.cwd(), "data");
 const FS_FALLBACK_DIR = path.join(os.tmpdir(), "uootd");
 
 function kvConfigured() {
-  return Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+  return Boolean(
+    (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) ||
+      (process.env.UPSTASH_REDIS_REST_URL &&
+        process.env.UPSTASH_REDIS_REST_TOKEN)
+  );
 }
 
 async function getKv() {
   if (!kvConfigured()) return null;
+
+  if (!process.env.KV_REST_API_URL && process.env.UPSTASH_REDIS_REST_URL) {
+    process.env.KV_REST_API_URL = process.env.UPSTASH_REDIS_REST_URL;
+  }
+  if (!process.env.KV_REST_API_TOKEN && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    process.env.KV_REST_API_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+  }
+
   try {
     const { kv } = await import("@vercel/kv");
     return kv;
