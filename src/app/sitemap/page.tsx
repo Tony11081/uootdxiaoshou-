@@ -2,6 +2,9 @@ import Link from "next/link";
 
 const links = [
   { href: "/", label: "Home" },
+  { href: "/bags", label: "Bags" },
+  { href: "/golden-goose", label: "Golden Goose" },
+  { href: "/uotd", label: "UOTD / UOOTD" },
   { href: "/about", label: "About Us" },
   { href: "/contact", label: "Contact Us" },
   { href: "/faq", label: "FAQ" },
@@ -9,6 +12,7 @@ const links = [
   { href: "/terms", label: "Terms" },
   { href: "/mission", label: "Our Mission" },
   { href: "/cart", label: "Sourcing List" },
+  { href: "/sitemap.xml", label: "Sitemap (XML)" },
 ] as const;
 
 export default function SitemapPage() {
@@ -36,4 +40,3 @@ export default function SitemapPage() {
     </div>
   );
 }
-

@@ -47,6 +47,16 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
+              <Link href="/bags" className="hover:text-[var(--ink)]">
+                Bags
+              </Link>
+            </li>
+            <li>
+              <Link href="/golden-goose" className="hover:text-[var(--ink)]">
+                Golden Goose
+              </Link>
+            </li>
+            <li>
               <Link href="/about" className="hover:text-[var(--ink)]">
                 About Us
               </Link>
@@ -87,6 +97,11 @@ export function SiteFooter() {
             <li>
               <Link href="/sitemap" className="hover:text-[var(--ink)]">
                 Sitemap
+              </Link>
+            </li>
+            <li>
+              <Link href="/sitemap.xml" className="hover:text-[var(--ink)]">
+                Sitemap (XML)
               </Link>
             </li>
           </ul>

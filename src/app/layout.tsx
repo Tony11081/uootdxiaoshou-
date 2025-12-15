@@ -4,6 +4,8 @@ import "./globals.css";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 
+const SITE_URL = "https://newuootd.com";
+
 const sora = Sora({
   variable: "--font-sora",
   subsets: ["latin"],
@@ -23,9 +25,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "UOOTD | Insider Quoting Platform",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "UOOTD | Insider Quoting Desk",
+    template: "%s | UOOTD",
+  },
   description:
-    "See it. Screenshot it. Upload it. Get the factory insider price in 3 seconds with UOOTD.",
+    "Upload a screenshot to request a private quote for luxury bags, shoes, and more. Worldwide shipping. PayPal invoice only.",
   keywords: [
     "UOOTD",
     "insider pricing",
