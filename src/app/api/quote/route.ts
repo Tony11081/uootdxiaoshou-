@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { computeQuoteFromMsrp } from "@/server/pricing";
+import { putQuoteAsset } from "@/server/assets-store";
 
 type Category = "FOOTWEAR" | "BAG" | "ACCESSORY" | "UNKNOWN";
 
@@ -214,6 +215,8 @@ export async function POST(request: Request) {
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID()
       : `q-${Date.now()}`;
+
+  await putQuoteAsset(id, raw).catch(() => {});
 
   return NextResponse.json({
     id,

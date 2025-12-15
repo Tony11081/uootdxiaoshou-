@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { addLead, deleteLead, listLeadsWithSource } from "@/server/leads-store";
 import { getSession } from "@/server/auth";
+import { deleteQuoteAsset } from "@/server/assets-store";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,7 @@ export async function DELETE(request: Request) {
 
   const url = new URL(request.url);
   const paramId = url.searchParams.get("id");
+  const quoteId = url.searchParams.get("quoteId");
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const bodyId = typeof body.id === "string" ? body.id : null;
   const id = paramId || bodyId;
@@ -78,5 +80,8 @@ export async function DELETE(request: Request) {
   }
 
   const ok = await deleteLead(id);
+  if (ok && quoteId) {
+    await deleteQuoteAsset(quoteId).catch(() => {});
+  }
   return NextResponse.json({ ok });
 }

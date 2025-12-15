@@ -292,6 +292,7 @@ export default function Home() {
   >("idle");
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string>(demoTiles[0].imageUrl);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   const [leadOpen, setLeadOpen] = useState(false);
   const [lead, setLead] = useState<LeadForm>({ paypal: "", whatsapp: "" });
@@ -416,6 +417,7 @@ export default function Home() {
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    setUploadedFile(null);
 
     const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
     const allowedExtensions = new Set([".jpg", ".jpeg", ".png", ".webp"]);
@@ -427,16 +429,19 @@ export default function Home() {
 
     if (!typeOk) {
       setError("Please upload a JPG, PNG, or WebP image.");
+      setUploadedFile(null);
       event.target.value = "";
       return;
     }
 
     if (file.size > maxBytes) {
       setError("Max file size is 10MB.");
+      setUploadedFile(null);
       event.target.value = "";
       return;
     }
 
+    setUploadedFile(file);
     const reader = new FileReader();
     reader.onload = (e) => {
       const url = (e.target?.result as string) || "";
@@ -481,6 +486,50 @@ export default function Home() {
     const subject = `UOOTD Quote ${quote.id}`;
     const body = buildWhatsAppMessage();
     return `mailto:${CONTACT.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  const buildMoreMediaMessage = () => {
+    return [
+      "UOOTD | Media Request",
+      `Quote ID: ${quote.id}`,
+      quote.productName ? `Product: ${quote.productName}` : null,
+      `Quoted Price: ${quote.quoteUsd === null ? "VIP Requested" : `$${formatUsd(quote.quoteUsd)}`}`,
+      "Request: Please send more real photos and/or a short video of this item.",
+      "Screenshot: already uploaded on uootd.com (linked to Quote ID).",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  };
+
+  const handleRequestMoreMedia = async () => {
+    const message = buildMoreMediaMessage();
+
+    const file = uploadedFile;
+    const nav = navigator as unknown as {
+      share?: (data: { title?: string; text?: string; files?: File[] }) => Promise<void>;
+      canShare?: (data: { files?: File[] }) => boolean;
+    };
+
+    if (
+      file &&
+      typeof nav.share === "function" &&
+      (typeof nav.canShare !== "function" || nav.canShare({ files: [file] }))
+    ) {
+      try {
+        await nav.share({
+          title: "UOOTD Quote",
+          text: message,
+          files: [file],
+        });
+        return;
+      } catch {}
+    }
+
+    const salesNumber = sanitizeNumber(SALES_WHATSAPP);
+    const link = `https://wa.me/${salesNumber}?text=${encodeURIComponent(message)}`;
+    if (typeof window !== "undefined") {
+      window.location.href = link;
+    }
   };
 
   const handleCheckoutClick = () => {
@@ -562,6 +611,7 @@ export default function Home() {
     setError(null);
     setLeadOpen(false);
     setLead((prev) => ({ ...prev, size: undefined, note: "" }));
+    setUploadedFile(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -798,13 +848,10 @@ export default function Home() {
                         <button
                           key={tile.demoType}
                           className="group overflow-hidden rounded-2xl border border-black/10 bg-white/70 text-left shadow-sm transition hover:shadow-lg"
-                          onClick={() =>
-                            handleQuoteRequest(
-                              tile.imageUrl,
-                              "demo",
-                              tile.demoType,
-                            )
-                          }
+                          onClick={() => {
+                            setUploadedFile(null);
+                            handleQuoteRequest(tile.imageUrl, "demo", tile.demoType);
+                          }}
                         >
                           <div className="relative h-20 w-full overflow-hidden">
                             <Image
@@ -966,14 +1013,6 @@ export default function Home() {
                 <p className="text-xs uppercase tracking-[0.2em] text-[#7b6848]">Countdown</p>
                 <p className="text-2xl font-semibold text-[var(--ink)] tabular-nums">{promoClock}</p>
                 <p className="text-xs text-[#5c5345]">Reserve your slot while live.</p>
-                <button
-                  className="mt-2 gold-button rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em]"
-                  onClick={() =>
-                    handleQuoteRequest(demoTiles[0].imageUrl, "demo", demoTiles[0].demoType)
-                  }
-                >
-                  Start with sample
-                </button>
               </div>
             </div>
           </section>
@@ -1055,7 +1094,7 @@ export default function Home() {
                   Result & checkout
                 </h2>
                 <p className="text-sm text-[#4f4635]">
-                  Private quote based on detected MSRP (capped as needed).
+                  Private quote prepared from your screenshot.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -1163,6 +1202,12 @@ export default function Home() {
                       onClick={handleAddToCart}
                     >
                       Add to Sourcing List
+                    </button>
+                    <button
+                      className="outline-button rounded-full px-5 py-3 text-sm font-semibold uppercase tracking-[0.18em]"
+                      onClick={() => void handleRequestMoreMedia()}
+                    >
+                      Get more photos/video
                     </button>
                   </div>
 
@@ -1554,7 +1599,7 @@ export default function Home() {
           >
             WhatsApp
           </a>
-          <span>•</span>
+          <span>·</span>
           <a href={`mailto:${CONTACT.email}`} className="underline decoration-dotted">
             Email
           </a>

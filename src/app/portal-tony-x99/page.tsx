@@ -230,7 +230,10 @@ export default function AdminPortal() {
     setError(null);
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/leads?id=${encodeURIComponent(id)}`, {
+      const lead = leads.find((row) => row.id === id);
+      const quoteParam =
+        lead?.quoteId ? `&quoteId=${encodeURIComponent(lead.quoteId)}` : "";
+      const res = await fetch(`/api/leads?id=${encodeURIComponent(id)}${quoteParam}`, {
         method: "DELETE",
       });
       const data = await res.json().catch(() => null);
@@ -560,6 +563,16 @@ export default function AdminPortal() {
                         >
                           WhatsApp
                         </a>
+                        {lead.quoteId ? (
+                          <a
+                            className="outline-button rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]"
+                            href={`/api/assets/${encodeURIComponent(lead.quoteId)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Screenshot
+                          </a>
+                        ) : null}
                         {lead.imageUrl ? (
                           <a
                             className="outline-button rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]"
