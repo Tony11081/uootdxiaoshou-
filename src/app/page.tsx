@@ -9,7 +9,7 @@ import { CartItem, loadCart, saveCart } from "@/lib/cart-storage";
 import type { Locale, Quote } from "@/types/quote";
 
 const SALES_WHATSAPP = "+86 134 6224 8923";
-const QUOTE_TIMEOUT_MS = 12000;
+const QUOTE_TIMEOUT_MS = 45000;
 const MAX_IMAGE_CHARS_FOR_CART = 8000;
 const MIN_SCAN_MS = 1200;
 const UPLOAD_INPUT_ID = "uootd-upload-input";
@@ -191,6 +191,8 @@ type QuoteTier = "premium" | "normal";
 
 const NORMAL_TIER_MULTIPLIER = 0.65;
 const NORMAL_TIER_FLOOR_USD = 90;
+const IMAGE_RESIZE_MAX_DIM = 1600;
+const IMAGE_UPLOAD_TARGET_BYTES = 1_600_000;
 
 function formatUsd(value: number) {
   return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
@@ -214,6 +216,68 @@ function computeNormalQuoteUsd(premiumUsd: number | null | undefined): number | 
   if (typeof premiumUsd !== "number" || !Number.isFinite(premiumUsd)) return null;
   const raw = premiumUsd * NORMAL_TIER_MULTIPLIER;
   return Math.round(Math.max(NORMAL_TIER_FLOOR_USD, raw));
+}
+
+function readFileAsDataUrl(file: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("File read failed"));
+    reader.onload = () => resolve((reader.result as string) || "");
+    reader.readAsDataURL(file);
+  });
+}
+
+async function compressImageFile(file: File) {
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const img = document.createElement("img");
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("Image decode failed"));
+      img.src = objectUrl;
+    });
+
+    const maxDim = IMAGE_RESIZE_MAX_DIM;
+    const w = img.naturalWidth || img.width;
+    const h = img.naturalHeight || img.height;
+    if (!w || !h) throw new Error("Invalid image dimensions");
+
+    const scale = Math.min(1, maxDim / Math.max(w, h));
+    const targetW = Math.max(1, Math.round(w * scale));
+    const targetH = Math.max(1, Math.round(h * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = targetW;
+    canvas.height = targetH;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas unavailable");
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, targetW, targetH);
+    ctx.drawImage(img, 0, 0, targetW, targetH);
+
+    const makeBlob = (quality: number) =>
+      new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error("Encode failed"))),
+          "image/jpeg",
+          quality,
+        );
+      });
+
+    const candidates = [0.86, 0.8, 0.72, 0.64];
+    for (let i = 0; i < candidates.length; i += 1) {
+      const q = candidates[i];
+      const blob = await makeBlob(q);
+      if (blob.size <= IMAGE_UPLOAD_TARGET_BYTES || i === candidates.length - 1) {
+        return await readFileAsDataUrl(blob);
+      }
+    }
+
+    return await readFileAsDataUrl(await makeBlob(0.64));
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
 }
 
 function Accordion({
@@ -306,6 +370,7 @@ export default function Home() {
   const [preview, setPreview] = useState<string>(demoTiles[0].imageUrl);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [selectedTier, setSelectedTier] = useState<QuoteTier>("premium");
+  const uploadAttemptRef = useRef(0);
 
   const [leadOpen, setLeadOpen] = useState(false);
   const [lead, setLead] = useState<LeadForm>({ paypal: "", whatsapp: "" });
@@ -468,12 +533,31 @@ export default function Home() {
     }
 
     setUploadedFile(file);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const url = (e.target?.result as string) || "";
-      handleQuoteRequest(url, "upload");
-    };
-    reader.readAsDataURL(file);
+
+    const attemptId = ++uploadAttemptRef.current;
+    const previewUrl = URL.createObjectURL(file);
+    setStatus("scanning");
+    setError(null);
+    setPreview(previewUrl);
+
+    void (async () => {
+      try {
+        const imageUrl =
+          file.size > IMAGE_UPLOAD_TARGET_BYTES
+            ? await compressImageFile(file)
+            : await readFileAsDataUrl(file);
+
+        if (uploadAttemptRef.current !== attemptId) return;
+        await handleQuoteRequest(imageUrl, "upload");
+      } catch (err) {
+        console.error(err);
+        if (uploadAttemptRef.current !== attemptId) return;
+        setStatus("error");
+        setError("Could not read or compress the image. Please try again.");
+      } finally {
+        URL.revokeObjectURL(previewUrl);
+      }
+    })();
 
     // Allow re-selecting the same file (mobile browsers often reuse the last image).
     event.target.value = "";
@@ -698,7 +782,9 @@ export default function Home() {
             <p className="mt-2 text-2xl font-semibold text-[var(--ink)]">
               Estimated time: ~3 seconds
             </p>
-            <p className="text-sm text-[#4f4635]">Please wait, we are detecting your item…</p>
+            <p className="text-sm text-[#4f4635]">
+              Please wait while we analyze your image (may take longer on mobile networks).
+            </p>
             <div className="mt-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7b6848]">
               <span className="h-2 w-2 rounded-full bg-[#d4af37] animate-bounce" />
               <span className="h-2 w-2 rounded-full bg-[#d4af37] animate-bounce [animation-delay:0.15s]" />
