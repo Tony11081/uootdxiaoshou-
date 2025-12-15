@@ -195,6 +195,11 @@ function sanitizeNumber(num: string) {
   return num.replace(/[^\d]/g, "");
 }
 
+function fileExt(name: string) {
+  const idx = name.lastIndexOf(".");
+  return idx >= 0 ? name.slice(idx).toLowerCase() : "";
+}
+
 function quoteLabel(quoteUsd: number | null) {
   if (quoteUsd === null) return "VIP Price";
   return `$${formatUsd(quoteUsd)}`;
@@ -412,11 +417,16 @@ export default function Home() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const allowedTypes = new Set(["image/jpeg", "image/png"]);
+    const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+    const allowedExtensions = new Set([".jpg", ".jpeg", ".png", ".webp"]);
     const maxBytes = 10 * 1024 * 1024;
+    const ext = fileExt(file.name);
+    const typeOk =
+      allowedTypes.has(file.type) ||
+      (!file.type && allowedExtensions.has(ext));
 
-    if (!allowedTypes.has(file.type)) {
-      setError("Please upload a PNG or JPG image.");
+    if (!typeOk) {
+      setError("Please upload a JPG, PNG, or WebP image.");
       event.target.value = "";
       return;
     }
@@ -433,6 +443,16 @@ export default function Home() {
       handleQuoteRequest(url, "upload");
     };
     reader.readAsDataURL(file);
+  };
+
+  const openUploadPicker = (event?: { preventDefault?: () => void }) => {
+    const input = uploadInputRef.current;
+    if (!input) return;
+    const showPicker = (input as unknown as { showPicker?: () => void }).showPicker;
+    if (typeof showPicker === "function") {
+      event?.preventDefault?.();
+      showPicker.call(input);
+    }
   };
 
   const buildWhatsAppMessage = () => {
@@ -701,18 +721,22 @@ export default function Home() {
                     </div>
                     <label
                       htmlFor={UPLOAD_INPUT_ID}
+                      onClick={(e) => openUploadPicker(e)}
                       className="gold-button cursor-pointer rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em]"
                     >
                       Choose image
                     </label>
                   </div>
 
-                  <label className="mt-3 flex cursor-pointer flex-col gap-3 rounded-2xl border border-dashed border-[#d4af37]/60 bg-gradient-to-br from-white to-[#f5efe2] px-5 py-6 shadow-inner transition hover:shadow-lg">
+                  <label
+                    onClick={(e) => openUploadPicker(e)}
+                    className="mt-3 flex cursor-pointer flex-col gap-3 rounded-2xl border border-dashed border-[#d4af37]/60 bg-gradient-to-br from-white to-[#f5efe2] px-5 py-6 shadow-inner transition hover:shadow-lg"
+                  >
                     <input
                       id={UPLOAD_INPUT_ID}
                       ref={uploadInputRef}
                       type="file"
-                      accept="image/png,image/jpeg"
+                      accept="image/png,image/jpeg,image/webp"
                       className="sr-only"
                       onChange={handleFileChange}
                     />
@@ -730,7 +754,7 @@ export default function Home() {
                       {expectationLine[locale]}
                     </p>
                     <div className="flex flex-wrap items-center gap-2 text-xs text-[#5c5345]">
-                      <span>PNG/JPG | up to 10MB | screenshots work best</span>
+                      <span>PNG/JPG/WebP | up to 10MB | screenshots work best</span>
                       <span
                         className="cursor-help underline decoration-dotted"
                         title="Include the full item and any visible logo/hardware."
