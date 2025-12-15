@@ -12,6 +12,9 @@ type LeadRow = {
   productName?: string;
   detectedMsrpUsd?: number | null;
   quoteUsd?: number | null;
+  normalQuoteUsd?: number | null;
+  selectedTier?: "premium" | "normal";
+  selectedQuoteUsd?: number | null;
   status?: string;
   channel?: "whatsapp" | "email" | "manual";
   paypal: string;
@@ -38,6 +41,11 @@ type ManualLeadDraft = {
 
 function formatUsd(value: number) {
   return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
+}
+
+function computeNormalQuoteUsd(premiumUsd: number) {
+  const raw = premiumUsd * 0.65;
+  return Math.round(Math.max(90, raw));
 }
 
 export default function AdminPortal() {
@@ -188,6 +196,9 @@ export default function AdminPortal() {
       "productName",
       "msrpUsd",
       "quoteUsd",
+      "normalQuoteUsd",
+      "selectedTier",
+      "selectedQuoteUsd",
       "status",
       "paypal",
       "whatsapp",
@@ -196,22 +207,48 @@ export default function AdminPortal() {
       "imageUrl",
     ];
 
-    const rows = filteredLeads.map((lead) => [
-      lead.createdAt,
-      lead.id,
-      lead.quoteId || "",
-      lead.channel || "",
-      lead.category || "",
-      lead.productName || "",
-      typeof lead.detectedMsrpUsd === "number" ? lead.detectedMsrpUsd : "",
-      typeof lead.quoteUsd === "number" ? lead.quoteUsd : lead.quoteUsd === null ? "VIP" : "",
-      lead.status || "",
-      lead.paypal,
-      lead.whatsapp,
-      lead.size || "",
-      lead.note || "",
-      lead.imageUrl || "",
-    ]);
+    const rows = filteredLeads.map((lead) => {
+      const premium =
+        typeof lead.quoteUsd === "number" ? lead.quoteUsd : lead.quoteUsd === null ? null : undefined;
+      const normal =
+        typeof lead.normalQuoteUsd === "number"
+          ? lead.normalQuoteUsd
+          : typeof lead.quoteUsd === "number"
+            ? computeNormalQuoteUsd(lead.quoteUsd)
+            : lead.quoteUsd === null
+              ? null
+              : undefined;
+      const tier =
+        lead.selectedTier === "premium" || lead.selectedTier === "normal"
+          ? lead.selectedTier
+          : "";
+      const selected =
+        typeof lead.selectedQuoteUsd === "number"
+          ? lead.selectedQuoteUsd
+          : tier === "normal"
+            ? normal
+            : premium;
+
+      return [
+        lead.createdAt,
+        lead.id,
+        lead.quoteId || "",
+        lead.channel || "",
+        lead.category || "",
+        lead.productName || "",
+        typeof lead.detectedMsrpUsd === "number" ? lead.detectedMsrpUsd : "",
+        typeof premium === "number" ? premium : premium === null ? "VIP" : "",
+        typeof normal === "number" ? normal : normal === null ? "VIP" : "",
+        tier,
+        typeof selected === "number" ? selected : selected === null ? "VIP" : "",
+        lead.status || "",
+        lead.paypal,
+        lead.whatsapp,
+        lead.size || "",
+        lead.note || "",
+        lead.imageUrl || "",
+      ];
+    });
 
     const csv = [
       header.map(csvCell).join(","),
@@ -528,11 +565,50 @@ export default function AdminPortal() {
                         : "—"}
                     </td>
                     <td className="px-3 py-2 text-[var(--ink)]">
-                      {typeof lead.quoteUsd === "number"
-                        ? `$${formatUsd(lead.quoteUsd)}`
-                        : lead.quoteUsd === null
-                        ? "VIP review"
-                        : "—"}
+                      {(() => {
+                        const premium =
+                          typeof lead.quoteUsd === "number"
+                            ? lead.quoteUsd
+                            : lead.quoteUsd === null
+                              ? null
+                              : undefined;
+                        const normal =
+                          typeof lead.normalQuoteUsd === "number"
+                            ? lead.normalQuoteUsd
+                            : typeof lead.quoteUsd === "number"
+                              ? computeNormalQuoteUsd(lead.quoteUsd)
+                              : lead.quoteUsd === null
+                                ? null
+                                : undefined;
+                        const tier =
+                          lead.selectedTier === "normal" ? "normal" : "premium";
+                        const selected =
+                          typeof lead.selectedQuoteUsd === "number"
+                            ? lead.selectedQuoteUsd
+                            : tier === "normal"
+                              ? normal
+                              : premium;
+
+                        const label = (value: number | null | undefined) => {
+                          if (typeof value === "number") return `$${formatUsd(value)}`;
+                          if (value === null) return "VIP review";
+                          return "—";
+                        };
+
+                        return (
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-2 font-semibold">
+                              <span>{label(selected)}</span>
+                              <span className="rounded-full bg-black/5 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7b6848]">
+                                {tier.toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-[#5c5345]">
+                              Premium {label(premium)} · Normal {label(normal)}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-3 py-2 text-[#5c5345]">
                       <div>{lead.paypal}</div>

@@ -187,6 +187,11 @@ type LeadForm = {
   note?: string;
 };
 
+type QuoteTier = "premium" | "normal";
+
+const NORMAL_TIER_MULTIPLIER = 0.65;
+const NORMAL_TIER_FLOOR_USD = 90;
+
 function formatUsd(value: number) {
   return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
 }
@@ -203,6 +208,12 @@ function fileExt(name: string) {
 function quoteLabel(quoteUsd: number | null) {
   if (quoteUsd === null) return "VIP Price";
   return `$${formatUsd(quoteUsd)}`;
+}
+
+function computeNormalQuoteUsd(premiumUsd: number | null | undefined): number | null {
+  if (typeof premiumUsd !== "number" || !Number.isFinite(premiumUsd)) return null;
+  const raw = premiumUsd * NORMAL_TIER_MULTIPLIER;
+  return Math.round(Math.max(NORMAL_TIER_FLOOR_USD, raw));
 }
 
 function Accordion({
@@ -279,6 +290,7 @@ export default function Home() {
     productName: "Calfskin Ankle Boot",
     detectedMsrpUsd: 780,
     quoteUsd: 195,
+    normalQuoteUsd: computeNormalQuoteUsd(195),
     marketingCopy: {
       en: "Hand-finished calfskin boot with atelier-grade stitching. Ships discreetly with dust bag and double-boxed packaging.",
       pt: "Bota em couro com costura de atelier. Envio discreto com dust bag e embalagem dupla.",
@@ -293,6 +305,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string>(demoTiles[0].imageUrl);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [selectedTier, setSelectedTier] = useState<QuoteTier>("premium");
 
   const [leadOpen, setLeadOpen] = useState(false);
   const [lead, setLead] = useState<LeadForm>({ paypal: "", whatsapp: "" });
@@ -345,6 +358,13 @@ export default function Home() {
   const isFootwear = quote.category?.toUpperCase() === "FOOTWEAR";
   const isFastTrack = quote.status === "FAST_TRACK" && quote.quoteUsd !== null;
   const sizeReady = true;
+  const premiumQuoteUsd = quote.quoteUsd;
+  const normalQuoteUsd =
+    typeof quote.normalQuoteUsd === "number"
+      ? quote.normalQuoteUsd
+      : computeNormalQuoteUsd(premiumQuoteUsd);
+  const selectedQuoteUsd =
+    selectedTier === "premium" ? premiumQuoteUsd : normalQuoteUsd;
 
   const primaryCtaLabel = useMemo(() => {
     return isFastTrack ? "SECURE CHECKOUT" : "CONTACT VIP DESK";
@@ -361,6 +381,7 @@ export default function Home() {
     setStatus("scanning");
     setError(null);
     setPreview(imageUrl);
+    setSelectedTier("premium");
 
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), QUOTE_TIMEOUT_MS);
@@ -382,6 +403,7 @@ export default function Home() {
       if (elapsed < MIN_SCAN_MS) {
         await new Promise((resolve) => setTimeout(resolve, MIN_SCAN_MS - elapsed));
       }
+      const premiumUsd = typeof data?.quote_usd === "number" ? data.quote_usd : null;
       const nextQuote: Quote = {
         id: (data?.id as string) || `quote-${Date.now()}`,
         imageUrl,
@@ -389,7 +411,11 @@ export default function Home() {
         productName: typeof data?.product_name === "string" ? data.product_name : quote.productName,
         detectedMsrpUsd:
           typeof data?.detected_msrp_usd === "number" ? data.detected_msrp_usd : quote.detectedMsrpUsd,
-        quoteUsd: typeof data?.quote_usd === "number" ? data.quote_usd : null,
+        quoteUsd: premiumUsd,
+        normalQuoteUsd:
+          typeof data?.normal_quote_usd === "number"
+            ? data.normal_quote_usd
+            : computeNormalQuoteUsd(premiumUsd),
         marketingCopy: data?.marketing_copy || quote.marketingCopy,
         status:
           data?.status === "FAST_TRACK" || data?.status === "VIP_REVIEW"
@@ -461,12 +487,19 @@ export default function Home() {
   };
 
   const buildWhatsAppMessage = () => {
+    const premiumText =
+      premiumQuoteUsd === null ? "VIP Requested" : `$${formatUsd(premiumQuoteUsd)}`;
+    const normalText =
+      normalQuoteUsd === null ? "VIP Requested" : `$${formatUsd(normalQuoteUsd)}`;
+    const selectedText = selectedTier === "premium" ? premiumText : normalText;
     return [
       "UOOTD | Quote Request",
       `Quote ID: ${quote.id}`,
       `Category: ${quote.category}`,
       quote.productName ? `Product: ${quote.productName}` : null,
-      `Quoted Price: ${quote.quoteUsd === null ? "VIP Requested" : `$${formatUsd(quote.quoteUsd)}`}`,
+      `Premium Quote: ${premiumText}`,
+      `Normal Quote: ${normalText}`,
+      `Selected: ${selectedTier === "premium" ? "Premium" : "Normal"} (${selectedText})`,
       `Customer PayPal: ${lead.paypal}`,
       `Customer WhatsApp: ${lead.whatsapp}`,
       isFootwear ? `Size: ${lead.size || "N/A"}` : null,
@@ -489,11 +522,18 @@ export default function Home() {
   };
 
   const buildMoreMediaMessage = () => {
+    const premiumText =
+      premiumQuoteUsd === null ? "VIP Requested" : `$${formatUsd(premiumQuoteUsd)}`;
+    const normalText =
+      normalQuoteUsd === null ? "VIP Requested" : `$${formatUsd(normalQuoteUsd)}`;
+    const selectedText = selectedTier === "premium" ? premiumText : normalText;
     return [
       "UOOTD | Media Request",
       `Quote ID: ${quote.id}`,
       quote.productName ? `Product: ${quote.productName}` : null,
-      `Quoted Price: ${quote.quoteUsd === null ? "VIP Requested" : `$${formatUsd(quote.quoteUsd)}`}`,
+      `Premium Quote: ${premiumText}`,
+      `Normal Quote: ${normalText}`,
+      `Selected: ${selectedTier === "premium" ? "Premium" : "Normal"} (${selectedText})`,
       "Request: Please send more real photos and/or a short video of this item.",
       "Screenshot: already uploaded on uootd.com (linked to Quote ID).",
     ]
@@ -552,6 +592,8 @@ export default function Home() {
           ...quote,
           imageUrl: slimImage,
           size: lead.size,
+          selectedTier,
+          selectedQuoteUsd: selectedQuoteUsd ?? null,
           addedAt: Date.now(),
         },
       ];
@@ -565,7 +607,10 @@ export default function Home() {
       category: quote.category,
       productName: quote.productName,
       detectedMsrpUsd: quote.detectedMsrpUsd,
-      quoteUsd: quote.quoteUsd,
+      quoteUsd: premiumQuoteUsd,
+      normalQuoteUsd: normalQuoteUsd ?? null,
+      selectedTier,
+      selectedQuoteUsd: selectedQuoteUsd ?? null,
       status: quote.status,
       channel,
     };
@@ -612,6 +657,7 @@ export default function Home() {
     setLeadOpen(false);
     setLead((prev) => ({ ...prev, size: undefined, note: "" }));
     setUploadedFile(null);
+    setSelectedTier("premium");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -1133,10 +1179,14 @@ export default function Home() {
                   </div>
                   <div className="absolute bottom-0 w-full bg-gradient-to-t from-black/80 via-black/35 to-transparent p-5">
                     <p className="text-xs uppercase tracking-[0.2em] text-[#d4af37]">
-                      Quoted Price
+                      {selectedTier === "premium" ? "Premium version" : "Normal version"}
                     </p>
                     <p className="text-4xl font-semibold text-[#fef7d2]">
-                      {quoteLabel(quote.quoteUsd)}
+                      {quoteLabel(selectedQuoteUsd ?? null)}
+                    </p>
+                    <p className="mt-1 text-xs text-[#f3e5b8]">
+                      Premium: {quoteLabel(premiumQuoteUsd)} · Normal:{" "}
+                      {quoteLabel(normalQuoteUsd ?? null)}
                     </p>
                     {quote.productName ? (
                       <p className="text-sm text-[#f3e5b8]">{quote.productName}</p>
@@ -1161,6 +1211,50 @@ export default function Home() {
                   <p className="text-sm text-[#4f4635]">
                     {quote.marketingCopy?.[locale] || quote.marketingCopy?.en}
                   </p>
+
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTier("premium")}
+                      className={`rounded-2xl border px-4 py-3 text-left shadow-sm transition ${
+                        selectedTier === "premium"
+                          ? "border-[#d4af37]/60 bg-[#f9f4e2]/70"
+                          : "border-black/8 bg-white/80 hover:bg-white"
+                      }`}
+                      aria-pressed={selectedTier === "premium"}
+                    >
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7b6848]">
+                        Premium version
+                      </p>
+                      <p className="text-2xl font-semibold text-[var(--ink)]">
+                        {quoteLabel(premiumQuoteUsd)}
+                      </p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTier("normal")}
+                      className={`rounded-2xl border px-4 py-3 text-left shadow-sm transition ${
+                        selectedTier === "normal"
+                          ? "border-[#d4af37]/60 bg-[#f9f4e2]/70"
+                          : "border-black/8 bg-white/80 hover:bg-white"
+                      }`}
+                      aria-pressed={selectedTier === "normal"}
+                    >
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7b6848]">
+                        Normal version
+                      </p>
+                      <p className="text-2xl font-semibold text-[var(--ink)]">
+                        {quoteLabel(normalQuoteUsd ?? null)}
+                      </p>
+                    </button>
+                  </div>
+                  <p className="text-xs text-[#5c5345]">
+                    Selected:{" "}
+                    {selectedTier === "premium"
+                      ? "Premium version"
+                      : "Normal version"}
+                  </p>
+
                   <div className="grid grid-cols-2 gap-3 text-xs text-[#4f4635] sm:grid-cols-4">
                     {[
                       { label: "Quote", desc: "~3s" },
@@ -1440,10 +1534,14 @@ export default function Home() {
           <div className="glass-card flex flex-wrap items-center justify-between gap-3 rounded-3xl px-5 py-3 shadow-xl">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7b6848]">
-                {statusBadge}
+                {statusBadge} · {selectedTier === "premium" ? "Premium" : "Normal"}
               </p>
               <p className="text-lg font-semibold text-[var(--ink)]">
-                {quoteLabel(quote.quoteUsd)}
+                {quoteLabel(selectedQuoteUsd ?? null)}
+              </p>
+              <p className="text-[11px] text-[#5c5345]">
+                Premium {quoteLabel(premiumQuoteUsd)} · Normal{" "}
+                {quoteLabel(normalQuoteUsd ?? null)}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">

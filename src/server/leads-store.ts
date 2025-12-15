@@ -10,6 +10,9 @@ export type LeadRecord = {
   productName?: string;
   detectedMsrpUsd?: number | null;
   quoteUsd?: number | null;
+  normalQuoteUsd?: number | null;
+  selectedTier?: "premium" | "normal";
+  selectedQuoteUsd?: number | null;
   status?: string;
   channel?: "whatsapp" | "email" | "manual";
   paypal: string;
@@ -153,6 +156,18 @@ export async function addLead(input: LeadInput) {
     detectedMsrpUsd: safeNumber(input.detectedMsrpUsd),
     quoteUsd:
       input.quoteUsd === null ? null : safeNumber(input.quoteUsd ?? undefined),
+    normalQuoteUsd:
+      input.normalQuoteUsd === null
+        ? null
+        : safeNumber(input.normalQuoteUsd ?? undefined),
+    selectedTier:
+      input.selectedTier === "premium" || input.selectedTier === "normal"
+        ? input.selectedTier
+        : undefined,
+    selectedQuoteUsd:
+      input.selectedQuoteUsd === null
+        ? null
+        : safeNumber(input.selectedQuoteUsd ?? undefined),
     status: safeString(input.status),
     channel:
       input.channel === "whatsapp" ||

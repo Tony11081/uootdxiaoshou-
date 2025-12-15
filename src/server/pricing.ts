@@ -6,6 +6,11 @@ export const PRICING_RULES = {
   ceilingUsd: 379,
 } as const;
 
+export const NORMAL_TIER_RULES = {
+  multiplier: 0.65,
+  floorUsd: 90,
+} as const;
+
 export type QuoteStatus = "FAST_TRACK" | "VIP_REVIEW";
 
 export function computeQuoteFromMsrp(msrpUsd: number): {
@@ -23,4 +28,11 @@ export function computeQuoteFromMsrp(msrpUsd: number): {
     status: "FAST_TRACK",
     capped: quoteUsd !== Math.round(rawQuote),
   };
+}
+
+export function computeNormalQuoteFromPremium(premiumUsd: number): number {
+  const safePremium = Number.isFinite(premiumUsd) ? premiumUsd : 0;
+  const raw = safePremium * NORMAL_TIER_RULES.multiplier;
+  const bounded = Math.max(NORMAL_TIER_RULES.floorUsd, raw);
+  return Math.round(bounded);
 }

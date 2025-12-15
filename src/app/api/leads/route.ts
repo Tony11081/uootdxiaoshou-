@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { addLead, deleteLead, listLeadsWithSource } from "@/server/leads-store";
 import { getSession } from "@/server/auth";
 import { deleteQuoteAsset } from "@/server/assets-store";
+import { computeNormalQuoteFromPremium } from "@/server/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,24 @@ export async function POST(request: Request) {
     }
   }
 
+  const premiumQuoteUsd = payload.quoteUsd === null ? null : toNumber(payload.quoteUsd);
+  const normalQuoteUsd = (() => {
+    if (premiumQuoteUsd === null) return null;
+    const candidate = payload.normalQuoteUsd;
+    if (candidate === null) return null;
+    if (typeof candidate === "number" && Number.isFinite(candidate)) return candidate;
+    if (typeof candidate === "string" && candidate.trim()) {
+      const parsed = toNumber(candidate);
+      if (parsed !== null) return parsed;
+    }
+    return computeNormalQuoteFromPremium(premiumQuoteUsd);
+  })();
+
+  const tierRaw = typeof payload.selectedTier === "string" ? payload.selectedTier : "";
+  const tierValue = tierRaw.trim().toLowerCase();
+  const selectedTier = tierValue === "normal" ? "normal" : "premium";
+  const selectedQuoteUsd = selectedTier === "normal" ? normalQuoteUsd : premiumQuoteUsd;
+
   const record = await addLead({
     paypal,
     whatsapp,
@@ -52,7 +71,10 @@ export async function POST(request: Request) {
     category: typeof payload.category === "string" ? payload.category : undefined,
     productName: typeof payload.productName === "string" ? payload.productName : undefined,
     detectedMsrpUsd: toNumber(payload.detectedMsrpUsd),
-    quoteUsd: payload.quoteUsd === null ? null : toNumber(payload.quoteUsd),
+    quoteUsd: premiumQuoteUsd,
+    normalQuoteUsd,
+    selectedTier,
+    selectedQuoteUsd,
     status: typeof payload.status === "string" ? payload.status : undefined,
     channel,
     imageUrl: typeof payload.imageUrl === "string" ? payload.imageUrl : undefined,

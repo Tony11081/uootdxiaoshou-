@@ -5,7 +5,12 @@ import type { Quote } from "@/types/quote";
 export const STORAGE_CART_KEY = "uootd_cart_v1";
 export const AUTO_DELETE_DAYS = 7;
 
-export type CartItem = Quote & { size?: string; addedAt?: number };
+export type CartItem = Quote & {
+  size?: string;
+  addedAt?: number;
+  selectedTier?: "premium" | "normal";
+  selectedQuoteUsd?: number | null;
+};
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

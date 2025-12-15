@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { computeQuoteFromMsrp } from "@/server/pricing";
+import { computeNormalQuoteFromPremium, computeQuoteFromMsrp } from "@/server/pricing";
 import { putQuoteAsset } from "@/server/assets-store";
 
 type Category = "FOOTWEAR" | "BAG" | "ACCESSORY" | "UNKNOWN";
@@ -210,6 +210,7 @@ export async function POST(request: Request) {
   };
 
   const computed = computeQuoteFromMsrp(detection.detectedMsrpUsd);
+  const normalQuoteUsd = computeNormalQuoteFromPremium(computed.quoteUsd);
 
   const id =
     typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -224,6 +225,7 @@ export async function POST(request: Request) {
     product_name: detection.productName,
     detected_msrp_usd: detection.detectedMsrpUsd,
     quote_usd: computed.quoteUsd,
+    normal_quote_usd: normalQuoteUsd,
     status: computed.status,
     capped: computed.capped,
     marketing_copy: {

@@ -13,6 +13,7 @@ export interface Quote {
   productName?: string;
   detectedMsrpUsd?: number;
   quoteUsd: number | null;
+  normalQuoteUsd?: number | null;
   marketingCopy: MarketingCopy;
   status: "FAST_TRACK" | "VIP_REVIEW";
 }
