@@ -12,6 +12,7 @@ const SALES_WHATSAPP = "+86 134 6224 8923";
 const QUOTE_TIMEOUT_MS = 12000;
 const MAX_IMAGE_CHARS_FOR_CART = 8000;
 const MIN_SCAN_MS = 1200;
+const UPLOAD_INPUT_ID = "uootd-upload-input";
 
 const expectationLine: Record<Locale, string> = {
   en: "Most items get an instant quote. If an instant quote isn’t available, an insider replies on WhatsApp.",
@@ -701,20 +702,21 @@ export default function Home() {
                         Discreet scanner with gold rail animation.
                       </p>
                     </div>
-                    <button
-                      className="gold-button rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em]"
-                      onClick={() => uploadInputRef.current?.click()}
+                    <label
+                      htmlFor={UPLOAD_INPUT_ID}
+                      className="gold-button cursor-pointer rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em]"
                     >
                       Choose image
-                    </button>
+                    </label>
                   </div>
 
                   <label className="mt-3 flex cursor-pointer flex-col gap-3 rounded-2xl border border-dashed border-[#d4af37]/60 bg-gradient-to-br from-white to-[#f5efe2] px-5 py-6 shadow-inner transition hover:shadow-lg">
                     <input
+                      id={UPLOAD_INPUT_ID}
                       ref={uploadInputRef}
                       type="file"
                       accept="image/png,image/jpeg"
-                      className="hidden"
+                      className="sr-only"
                       onChange={handleFileChange}
                     />
                     <div className="flex items-center gap-3">
