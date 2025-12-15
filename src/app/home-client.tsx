@@ -194,6 +194,12 @@ const NORMAL_TIER_FLOOR_USD = 90;
 const IMAGE_RESIZE_MAX_DIM = 1600;
 const IMAGE_UPLOAD_TARGET_BYTES = 1_600_000;
 
+type RateLimitInfo = {
+  limit: number;
+  windowSeconds: number;
+  retryAfterSeconds: number | null;
+};
+
 function formatUsd(value: number) {
   return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
 }
@@ -216,6 +222,15 @@ function computeNormalQuoteUsd(premiumUsd: number | null | undefined): number | 
   if (typeof premiumUsd !== "number" || !Number.isFinite(premiumUsd)) return null;
   const raw = premiumUsd * NORMAL_TIER_MULTIPLIER;
   return Math.round(Math.max(NORMAL_TIER_FLOOR_USD, raw));
+}
+
+function formatMinutesSeconds(totalSeconds: number) {
+  const safe = Math.max(0, Math.floor(totalSeconds));
+  const m = Math.floor(safe / 60)
+    .toString()
+    .padStart(2, "0");
+  const s = (safe % 60).toString().padStart(2, "0");
+  return `${m}:${s}`;
 }
 
 function readFileAsDataUrl(file: Blob) {
@@ -367,6 +382,8 @@ export default function HomeClient() {
     "idle" | "scanning" | "ready" | "manual" | "error"
   >("idle");
   const [error, setError] = useState<string | null>(null);
+  const [rateLimitOpen, setRateLimitOpen] = useState(false);
+  const [rateLimitInfo, setRateLimitInfo] = useState<RateLimitInfo | null>(null);
   const [preview, setPreview] = useState<string>(demoTiles[0].imageUrl);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [selectedTier, setSelectedTier] = useState<QuoteTier>("premium");
@@ -445,6 +462,8 @@ export default function HomeClient() {
     const startedAt = Date.now();
     setStatus("scanning");
     setError(null);
+    setRateLimitOpen(false);
+    setRateLimitInfo(null);
     setPreview(imageUrl);
     setSelectedTier("premium");
 
@@ -458,6 +477,24 @@ export default function HomeClient() {
         body: JSON.stringify({ imageUrl, source, demoType }),
         signal: controller.signal,
       });
+
+      if (response.status === 429) {
+        const data = await response.json().catch(() => ({}));
+        const limit = typeof data?.limit === "number" ? data.limit : 10;
+        const windowSeconds =
+          typeof data?.window_seconds === "number" ? data.window_seconds : 300;
+        const retryAfterSeconds =
+          typeof data?.retry_after_seconds === "number"
+            ? data.retry_after_seconds
+            : null;
+        setRateLimitInfo({ limit, windowSeconds, retryAfterSeconds });
+        setRateLimitOpen(true);
+        setStatus("error");
+        setError(
+          "Too many quote requests in a short time. Please contact us on WhatsApp for a manual quote.",
+        );
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(`Quote service failed (${response.status})`);
@@ -504,6 +541,15 @@ export default function HomeClient() {
     }
     window.clearTimeout(timeoutId);
   };
+
+  const buildRateLimitWhatsAppLink = useMemo(() => {
+    const retryLine =
+      rateLimitInfo?.retryAfterSeconds && rateLimitInfo.retryAfterSeconds > 0
+        ? `Try again in ~${formatMinutesSeconds(rateLimitInfo.retryAfterSeconds)}.`
+        : "Please help with a manual quote.";
+    const text = `Hi UOOTD, I hit the instant quote rate limit while trying to upload a screenshot. ${retryLine}`;
+    return `https://wa.me/${CONTACT.whatsappDigits}?text=${encodeURIComponent(text)}`;
+  }, [rateLimitInfo]);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -1829,6 +1875,52 @@ export default function HomeClient() {
                 Privacy: your screenshot is used only to prepare your quote.
               </p>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {rateLimitOpen ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
+          <div className="glass-card relative w-full max-w-lg rounded-3xl p-6">
+            <button
+              className="absolute right-3 top-3 text-sm text-[#7b6848]"
+              onClick={() => setRateLimitOpen(false)}
+            >
+              Close
+            </button>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#7b6848]">
+              Rate limit
+            </p>
+            <h3 className="text-2xl font-semibold text-[var(--ink)]">
+              Too many quote attempts
+            </h3>
+            <p className="mt-3 text-sm text-[#4f4635]">
+              To keep the quote service stable, we limit rapid requests. Please contact us on WhatsApp and we&apos;ll prepare a manual quote.
+            </p>
+            {rateLimitInfo?.retryAfterSeconds ? (
+              <p className="mt-2 text-xs text-[#5c5345]">
+                You can also retry in ~{formatMinutesSeconds(rateLimitInfo.retryAfterSeconds)}.
+              </p>
+            ) : null}
+            <div className="mt-5 flex flex-wrap gap-2">
+              <a
+                href={buildRateLimitWhatsAppLink}
+                target="_blank"
+                rel="noreferrer"
+                className="gold-button flex-1 rounded-2xl px-4 py-3 text-center text-sm font-semibold uppercase tracking-[0.16em]"
+              >
+                WhatsApp for quote
+              </a>
+              <button
+                className="outline-button flex-1 rounded-2xl px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]"
+                onClick={() => setRateLimitOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            <p className="mt-4 text-xs text-[#5c5345]">
+              Tip: If you still need help, send your screenshot in WhatsApp and we&apos;ll confirm details there.
+            </p>
           </div>
         </div>
       ) : null}

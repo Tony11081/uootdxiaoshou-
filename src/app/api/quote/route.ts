@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { computeNormalQuoteFromPremium, computeQuoteFromMsrp } from "@/server/pricing";
 import { putQuoteAsset } from "@/server/assets-store";
+import { checkQuoteRateLimit } from "@/server/rate-limit";
 
 type Category = "FOOTWEAR" | "BAG" | "ACCESSORY" | "UNKNOWN";
 
@@ -169,6 +170,27 @@ Return JSON ONLY with keys:
 }
 
 export async function POST(request: Request) {
+  const rate = await checkQuoteRateLimit(request);
+  if (!rate.allowed) {
+    const retryAfter = rate.retryAfterSeconds ?? 300;
+    return NextResponse.json(
+      {
+        error: "RATE_LIMITED",
+        message: "Too many quote requests. Please contact us on WhatsApp for a manual quote.",
+        limit: rate.limit,
+        window_seconds: rate.windowSeconds,
+        retry_after_seconds: retryAfter,
+      },
+      {
+        status: 429,
+        headers: {
+          "Cache-Control": "no-store",
+          "Retry-After": String(retryAfter),
+        },
+      },
+    );
+  }
+
   const payload: QuoteRequestPayload = await request.json().catch(() => ({}));
   const raw = typeof payload.imageUrl === "string" ? payload.imageUrl : "";
   const hint = raw.toLowerCase();
