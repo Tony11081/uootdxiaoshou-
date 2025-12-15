@@ -441,9 +441,6 @@ export default function Home() {
       `Quote ID: ${quote.id}`,
       `Category: ${quote.category}`,
       quote.productName ? `Product: ${quote.productName}` : null,
-      typeof quote.detectedMsrpUsd === "number"
-        ? `Original price: $${formatUsd(quote.detectedMsrpUsd)}`
-        : null,
       `Quoted Price: ${quote.quoteUsd === null ? "VIP Requested" : `$${formatUsd(quote.quoteUsd)}`}`,
       `Customer PayPal: ${lead.paypal}`,
       `Customer WhatsApp: ${lead.whatsapp}`,
@@ -1081,11 +1078,6 @@ export default function Home() {
                     {quote.productName ? (
                       <p className="text-sm text-[#f3e5b8]">{quote.productName}</p>
                     ) : null}
-                    {typeof quote.detectedMsrpUsd === "number" ? (
-                      <p className="text-xs text-[#f3e5b8]/80">
-                        Original price: ${formatUsd(quote.detectedMsrpUsd)}
-                      </p>
-                    ) : null}
                     {!isFastTrack ? (
                       <p className="mt-1 text-sm font-semibold text-[#f3e5b8]">
                         Contact for VIP Price
@@ -1100,9 +1092,6 @@ export default function Home() {
                       <p className="font-semibold text-[var(--ink)]">
                         {quote.productName}
                       </p>
-                    ) : null}
-                    {typeof quote.detectedMsrpUsd === "number" ? (
-                      <p>Original price: ${formatUsd(quote.detectedMsrpUsd)}</p>
                     ) : null}
                   </div>
 

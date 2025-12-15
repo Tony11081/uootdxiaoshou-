@@ -82,11 +82,6 @@ export function OfferCard({
               {quote.productName}
             </p>
           ) : null}
-          {typeof quote.detectedMsrpUsd === "number" ? (
-            <p className="text-sm text-[#5c5345]">
-              Original price: ${formatUsd(quote.detectedMsrpUsd)}
-            </p>
-          ) : null}
           <p className="text-sm uppercase tracking-[0.16em] text-[#7a6845]">
             {quote.category}
           </p>

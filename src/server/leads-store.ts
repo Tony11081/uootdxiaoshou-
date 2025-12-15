@@ -11,7 +11,7 @@ export type LeadRecord = {
   detectedMsrpUsd?: number | null;
   quoteUsd?: number | null;
   status?: string;
-  channel?: "whatsapp" | "email";
+  channel?: "whatsapp" | "email" | "manual";
   paypal: string;
   whatsapp: string;
   size?: string;
@@ -132,6 +132,14 @@ function safeNumber(input: unknown) {
   return Number.isFinite(num) ? num : null;
 }
 
+function parseLeadRow(row: unknown): LeadRecord | null {
+  try {
+    if (typeof row === "string") return JSON.parse(row) as LeadRecord;
+    if (row && typeof row === "object") return row as LeadRecord;
+  } catch {}
+  return null;
+}
+
 export async function addLead(input: LeadInput) {
   const now = new Date().toISOString();
   const record: LeadRecord = {
@@ -146,7 +154,12 @@ export async function addLead(input: LeadInput) {
     quoteUsd:
       input.quoteUsd === null ? null : safeNumber(input.quoteUsd ?? undefined),
     status: safeString(input.status),
-    channel: input.channel === "whatsapp" || input.channel === "email" ? input.channel : undefined,
+    channel:
+      input.channel === "whatsapp" ||
+      input.channel === "email" ||
+      input.channel === "manual"
+        ? input.channel
+        : undefined,
     paypal: safeString(input.paypal) || "",
     whatsapp: safeString(input.whatsapp) || "",
     size: safeString(input.size),
@@ -177,15 +190,7 @@ export async function listLeadsWithSource() {
   if (kv) {
     try {
       const rows = await kv.lrange(KV_KEY, 0, MAX_STORED - 1);
-      const parsed = rows
-        .map((row) => {
-          try {
-            if (typeof row === "string") return JSON.parse(row);
-            if (row && typeof row === "object") return row;
-          } catch {}
-          return null;
-        })
-        .filter(Boolean) as LeadRecord[];
+      const parsed = rows.map(parseLeadRow).filter(Boolean) as LeadRecord[];
 
       const leads = parsed.sort(
         (a, b) =>
@@ -209,4 +214,32 @@ export async function listLeadsWithSource() {
 export async function listLeads() {
   const { leads } = await listLeadsWithSource();
   return leads;
+}
+
+export async function deleteLead(id: string) {
+  const kv = await getKv();
+  if (kv) {
+    try {
+      const rows = await kv.lrange(KV_KEY, 0, MAX_STORED - 1);
+      const parsed = rows.map(parseLeadRow).filter(Boolean) as LeadRecord[];
+      const filtered = parsed.filter((lead) => lead.id !== id);
+      if (filtered.length === parsed.length) return false;
+      await kv.del(KV_KEY);
+      if (filtered.length) {
+        await kv.rpush(
+          KV_KEY,
+          ...filtered.map((lead) => JSON.stringify(lead))
+        );
+      }
+      return true;
+    } catch (err) {
+      console.error("[leads] KV delete failed, falling back to FS", err);
+    }
+  }
+
+  const leads = await readFsLeads();
+  const filtered = leads.filter((lead) => lead.id !== id);
+  if (filtered.length === leads.length) return false;
+  await writeFsLeads(filtered);
+  return true;
 }

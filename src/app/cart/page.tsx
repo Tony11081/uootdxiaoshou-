@@ -122,11 +122,6 @@ export default function CartPage() {
                 <p className="text-lg font-semibold text-[var(--ink)]">
                   {quoteLabel(item.quoteUsd)}
                 </p>
-                {typeof item.detectedMsrpUsd === "number" ? (
-                  <p className="text-xs text-[#5c5345]">
-                    Original price: ${formatUsd(item.detectedMsrpUsd)}
-                  </p>
-                ) : null}
                 {item.size ? (
                   <p className="text-xs text-[#5c5345]">Size: {item.size}</p>
                 ) : null}
