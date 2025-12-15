@@ -474,6 +474,9 @@ export default function Home() {
       handleQuoteRequest(url, "upload");
     };
     reader.readAsDataURL(file);
+
+    // Allow re-selecting the same file (mobile browsers often reuse the last image).
+    event.target.value = "";
   };
 
   const openUploadPicker = (event?: { preventDefault?: () => void }) => {
@@ -658,6 +661,9 @@ export default function Home() {
     setLead((prev) => ({ ...prev, size: undefined, note: "" }));
     setUploadedFile(null);
     setSelectedTier("premium");
+    if (uploadInputRef.current) {
+      uploadInputRef.current.value = "";
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
