@@ -16,7 +16,10 @@ export default function TermsPage() {
       <div className="glass-card rounded-3xl p-6">
         <ul className="list-disc space-y-2 pl-5 text-sm text-[#4f4635]">
           <li>Quotes can change based on size, color, and availability.</li>
-          <li>Shipping and taxes are confirmed on WhatsApp.</li>
+          <li>
+            Worldwide free shipping. US &amp; Europe: 7–12 business days. Other countries: ~7–20 business days (estimates).
+          </li>
+          <li>Taxes/duties (if any) are confirmed on WhatsApp before invoicing.</li>
           <li>Invoices are sent to the PayPal email you provide.</li>
           <li>No account is required; we do not send marketing spam.</li>
         </ul>
@@ -39,4 +42,3 @@ export default function TermsPage() {
     </div>
   );
 }
-

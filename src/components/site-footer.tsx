@@ -92,7 +92,7 @@ export function SiteFooter() {
           </ul>
 
           <p className="mt-6 text-xs text-[#5c5345]">
-            PayPal invoice only • Discreet packaging
+            PayPal invoice only · Discreet packaging · Worldwide free shipping
           </p>
         </div>
       </div>
@@ -106,4 +106,3 @@ export function SiteFooter() {
     </footer>
   );
 }
-

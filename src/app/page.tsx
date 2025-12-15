@@ -855,6 +855,12 @@ export default function Home() {
                     <p className="text-xs text-[#5c5345]">
                       {expectationLine[locale]}
                     </p>
+                    <p className="text-xs text-[#5c5345]">
+                      We source luxury shoes, bags, clothing, swimwear, sunglasses, and accessories.
+                    </p>
+                    <p className="text-xs text-[#5c5345]">
+                      Worldwide free shipping. US &amp; Europe: 7–12 business days. Other countries: ~7–20 business days.
+                    </p>
                     <div className="flex flex-wrap items-center gap-2 text-xs text-[#5c5345]">
                       <span>PNG/JPG/WebP | up to 10MB | screenshots work best</span>
                       <span
@@ -940,6 +946,10 @@ export default function Home() {
                     <span className="h-2 w-2 rounded-full bg-[#d4af37]" />
                     <span>PayPal invoice only</span>
                   </div>
+                  <div className="flex items-center gap-2 rounded-2xl border border-black/8 bg-white/80 px-4 py-3 shadow-sm">
+                    <span className="h-2 w-2 rounded-full bg-[#d4af37]" />
+                    <span>Worldwide free shipping</span>
+                  </div>
                 </div>
               </div>
 
@@ -968,6 +978,24 @@ export default function Home() {
                     </p>
                     <p>We route it to VIP review and reply on WhatsApp.</p>
                   </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#7b6848]">
+                      Do you ship worldwide?
+                    </p>
+                    <p>
+                      Yes. Worldwide free shipping. US &amp; Europe: 7–12 business
+                      days. Other countries: ~7–20 business days.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#7b6848]">
+                      What can you source?
+                    </p>
+                    <p>
+                      Luxury shoes, bags, clothing, swimwear, sunglasses, and
+                      accessories across many brands.
+                    </p>
+                  </div>
                 </div>
               </Accordion>
 
@@ -992,9 +1020,16 @@ export default function Home() {
                     <span className="h-2 w-2 rounded-full bg-[#d4af37]" />
                     <span>Data policy: 7-day auto-delete · see Privacy</span>
                   </div>
+                  <div className="flex items-center gap-2 rounded-2xl border border-black/8 bg-white/80 px-3 py-2 shadow-sm sm:col-span-2">
+                    <span className="h-2 w-2 rounded-full bg-[#d4af37]" />
+                    <span>
+                      Worldwide free shipping — US &amp; Europe 7–12 business days,
+                      other countries ~7–20 business days
+                    </span>
+                  </div>
                 </div>
                 <p className="text-xs text-[#5c5345]">
-                  Includes: QC + discreet packaging. Excludes: shipping/taxes (confirmed on WhatsApp).
+                  Includes: QC + discreet packaging + worldwide shipping. Taxes/duties (if any) confirmed on WhatsApp.
                 </p>
               </div>
 
@@ -1349,8 +1384,9 @@ export default function Home() {
 
             <Accordion title="Details" defaultOpen>
               <div className="space-y-2 text-sm text-[#4f4635]">
-                <p>Includes: sourcing + QC + discreet packaging</p>
-                <p>Excludes: shipping/taxes (confirmed on WhatsApp)</p>
+                <p>Includes: sourcing + QC + discreet packaging + worldwide shipping</p>
+                <p>Delivery estimate: US &amp; Europe 7–12 business days; other countries ~7–20 business days</p>
+                <p>Taxes/duties (if any): confirmed on WhatsApp before invoice</p>
               </div>
             </Accordion>
 

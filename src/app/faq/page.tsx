@@ -45,6 +45,14 @@ export default function FAQPage() {
           q="Do I need an account?"
           a="No—no login required and no marketing spam."
         />
+        <FAQItem
+          q="Do you ship worldwide?"
+          a="Yes—worldwide free shipping. US & Europe: 7–12 business days. Other countries: ~7–20 business days."
+        />
+        <FAQItem
+          q="What can you source?"
+          a="Luxury shoes, bags, clothing, swimwear, sunglasses, and accessories across many brands."
+        />
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -64,4 +72,3 @@ export default function FAQPage() {
     </div>
   );
 }
-
