@@ -97,16 +97,34 @@ export async function checkQuoteRateLimit(request: Request): Promise<RateLimitDe
   const kv = await getKv();
   if (kv) {
     try {
-      const count = await kv.incr(key);
+      const kvAny = kv as unknown as Record<string, unknown>;
+      const incr =
+        typeof kvAny.incr === "function"
+          ? (kvAny.incr as (key: string) => Promise<number>).bind(kvAny)
+          : null;
+      const expire =
+        typeof kvAny.expire === "function"
+          ? (kvAny.expire as (key: string, seconds: number) => Promise<number>).bind(kvAny)
+          : null;
+      const ttl =
+        typeof kvAny.ttl === "function"
+          ? (kvAny.ttl as (key: string) => Promise<number>).bind(kvAny)
+          : null;
+
+      if (!incr || !expire) {
+        throw new Error("KV missing incr/expire");
+      }
+
+      const count = await incr(key);
       if (count === 1) {
-        await kv.expire(key, windowSeconds);
+        await expire(key, windowSeconds);
       }
 
       const remaining = Math.max(0, limit - Number(count));
       if (Number(count) > limit) {
-        const ttl = await kv.ttl(key).catch(() => null);
+        const ttlValue = ttl ? await ttl(key).catch(() => null) : null;
         const retryAfterSeconds =
-          typeof ttl === "number" && ttl > 0 ? ttl : windowSeconds;
+          typeof ttlValue === "number" && ttlValue > 0 ? ttlValue : windowSeconds;
         return {
           allowed: false,
           limit,
