@@ -4,13 +4,22 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { CONTACT } from "@/components/contact-info";
 
-const CATALOG_URL = "https://www.wsxcme.com/weshop/store/A202005261219019980372630";
+const STORE_ID = "A202005261219019980372630";
+const CATALOG_EXTERNAL_URL = `https://www.wsxcme.com/weshop/store/${STORE_ID}`;
+const CATALOG_EMBED_ORIGIN = process.env.NEXT_PUBLIC_CATALOG_EMBED_ORIGIN;
+const DEFAULT_EMBED_URL =
+  process.env.NODE_ENV === "development"
+    ? `/catalog-proxy/weshop/store/${STORE_ID}`
+    : CATALOG_EXTERNAL_URL;
+const CATALOG_EMBED_URL = CATALOG_EMBED_ORIGIN
+  ? `${CATALOG_EMBED_ORIGIN.replace(/\/$/, "")}/weshop/store/${STORE_ID}`
+  : DEFAULT_EMBED_URL;
 
 function buildWhatsAppLink() {
   const text =
     "Hi UOOTD, I'm browsing your product catalog and I'd like to ask about an item. " +
     "Catalog link: " +
-    CATALOG_URL +
+    CATALOG_EXTERNAL_URL +
     " (Please share QC photos/video and availability. I'll send a screenshot or product name.)";
   return `https://wa.me/${CONTACT.whatsappDigits}?text=${encodeURIComponent(text)}`;
 }
@@ -31,10 +40,10 @@ export function CatalogClient() {
               Product Catalog
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-[#4f4635]">
-              Browse our directory without leaving the site. If it doesn&apos;t load
-              on your phone (some browsers block embedded cookies), tap{" "}
+              Browse our directory without leaving the site. If it doesn&apos;t load (or shows
+              &quot;login expired&quot;), tap{" "}
               <a
-                href={CATALOG_URL}
+                href={CATALOG_EXTERNAL_URL}
                 target="_blank"
                 rel="noreferrer"
                 className="font-semibold text-[#7b6848] underline decoration-dotted hover:text-black"
@@ -61,7 +70,7 @@ export function CatalogClient() {
               Chat on WhatsApp
             </a>
             <a
-              href={CATALOG_URL}
+              href={CATALOG_EXTERNAL_URL}
               target="_blank"
               rel="noreferrer"
               className="outline-button rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em]"
@@ -73,9 +82,9 @@ export function CatalogClient() {
 
         <div className="mt-4 flex flex-wrap gap-2 text-xs text-[#5c5345]">
           {[
-            "Tip: Tap any item → screenshot → upload for instant quote",
+            "Tip: Tap any item -> screenshot -> upload for instant quote",
             "Need QC? We can send photos/video in WhatsApp",
-            "QC photos within 24h · ship only after approval",
+            "QC photos within 24h - ship only after approval",
           ].map((label) => (
             <span
               key={label}
@@ -97,7 +106,7 @@ export function CatalogClient() {
               <p className="mt-2 text-sm text-[#4f4635]">
                 If it stays blank, use{" "}
                 <a
-                  href={CATALOG_URL}
+                  href={CATALOG_EXTERNAL_URL}
                   target="_blank"
                   rel="noreferrer"
                   className="font-semibold text-[#7b6848] underline decoration-dotted hover:text-black"
@@ -113,7 +122,7 @@ export function CatalogClient() {
 
         <iframe
           title="UOOTD catalog"
-          src={CATALOG_URL}
+          src={CATALOG_EMBED_URL}
           className="h-[calc(100vh-180px)] w-full border-0"
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"
@@ -123,4 +132,3 @@ export function CatalogClient() {
     </div>
   );
 }
-
