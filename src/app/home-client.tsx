@@ -58,6 +58,15 @@ const steps = [
   },
 ] as const;
 
+const catalogCategories = [
+  { title: "Bags", note: "Handbags, totes, wallets" },
+  { title: "Shoes", note: "Sneakers, boots, loafers" },
+  { title: "Clothing", note: "Ready-to-wear, sets, jackets" },
+  { title: "Swimwear", note: "Swimsuits, beachwear" },
+  { title: "Sunglasses", note: "Classic & seasonal" },
+  { title: "Accessories", note: "Belts, jewelry, small goods" },
+] as const;
+
 const craftWall = [
   "Calfskin",
   "Saffiano",
@@ -879,6 +888,11 @@ export default function HomeClient() {
               </Link>
             </li>
             <li>
+              <Link href="/catalog" className="underline decoration-dotted hover:text-black">
+                Browse Catalog
+              </Link>
+            </li>
+            <li>
               <Link href="/golden-goose" className="underline decoration-dotted hover:text-black">
                 Golden Goose Quotes
               </Link>
@@ -910,6 +924,101 @@ export default function HomeClient() {
 
       <main className="relative z-10 mx-auto flex max-w-6xl flex-col gap-10">
         {view === "upload" ? <HeroDemo /> : null}
+
+        {view === "upload" ? (
+          <section className="glass-card overflow-hidden rounded-3xl border border-black/8 bg-white/90 p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#7b6848]">
+                  Product catalog
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-[var(--ink)]">
+                  Browse our live directory
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm text-[#4f4635]">
+                  Shoes, bags, clothing, swimwear, sunglasses, and accessories. Find a piece, take a
+                  screenshot, then upload it for an instant Premium + Normal quote.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  href="/catalog"
+                  className="gold-button rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em]"
+                >
+                  Open catalog
+                </Link>
+                <a
+                  href={`https://wa.me/${CONTACT.whatsappDigits}?text=${encodeURIComponent(
+                    "Hi UOOTD, I'm browsing your product catalog and I'd like to ask about an item. I'll send a screenshot or product name. Catalog: https://newuootd.com/catalog",
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="outline-button rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em]"
+                >
+                  WhatsApp help
+                </a>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+              <div className="grid gap-3">
+                <div className="rounded-2xl border border-black/8 bg-white/80 px-4 py-3 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#7b6848]">
+                    Shipping
+                  </p>
+                  <p className="mt-1 text-sm text-[#4f4635]">
+                    Worldwide free shipping. US &amp; Europe: 7-12 business days. Other countries:
+                    ~7-20 business days.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-black/8 bg-white/80 px-4 py-3 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#7b6848]">
+                    Tip
+                  </p>
+                  <p className="mt-1 text-sm text-[#4f4635]">
+                    Tap an item in the catalog, screenshot it, then upload here to get a private
+                    quote.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2 text-xs text-[#5c5345]">
+                  {[
+                    "PayPal invoice only",
+                    "PayPal Buyer Protection",
+                    "No prepayment",
+                    "QC photos within 24h",
+                    "Ship only after approval",
+                  ].map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full border border-black/8 bg-white/80 px-3 py-2 shadow-sm"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {catalogCategories.map((cat) => (
+                  <Link
+                    key={cat.title}
+                    href="/catalog"
+                    className="group rounded-2xl border border-black/10 bg-gradient-to-br from-white/85 to-[#f5efe2] px-4 py-4 shadow-sm transition hover:shadow-lg"
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7b6848]">
+                      {cat.title}
+                    </p>
+                    <p className="mt-1 text-xs text-[#4f4635]">{cat.note}</p>
+                    <div className="mt-4 scanner-rail h-1 rounded-full bg-black/5" />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         {view === "upload" ? (
           <section
