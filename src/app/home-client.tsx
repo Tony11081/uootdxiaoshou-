@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { ChangeEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ContactInfo, CONTACT } from "@/components/contact-info";
+import { HeroDemo } from "@/components/hero-demo";
 import { CartItem, loadCart, saveCart } from "@/lib/cart-storage";
 import type { Locale, Quote } from "@/types/quote";
 
@@ -908,6 +909,8 @@ export default function HomeClient() {
       </header>
 
       <main className="relative z-10 mx-auto flex max-w-6xl flex-col gap-10">
+        {view === "upload" ? <HeroDemo /> : null}
+
         {view === "upload" ? (
           <section
             ref={uploadSectionRef}
@@ -1044,6 +1047,9 @@ export default function HomeClient() {
                     <p className="text-xs text-[#5c5345]">
                       No login. No spam. Just a private quote.
                     </p>
+                    <p className="text-xs font-semibold text-[#5c5345]">
+                      Receive QC photos within 24h. Ship only after your approval.
+                    </p>
                     {error ? (
                       <p className="text-sm font-semibold text-[#9a3b3b]">
                         {error}
@@ -1134,6 +1140,12 @@ export default function HomeClient() {
                   </div>
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#7b6848]">
+                      When do I receive QC photos?
+                    </p>
+                    <p>Within 24h. We ship only after your approval.</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#7b6848]">
                       Do you ship worldwide?
                     </p>
                     <p>
@@ -1181,9 +1193,13 @@ export default function HomeClient() {
                       other countries ~7–20 business days
                     </span>
                   </div>
+                  <div className="flex items-center gap-2 rounded-2xl border border-black/8 bg-white/80 px-3 py-2 shadow-sm sm:col-span-2">
+                    <span className="h-2 w-2 rounded-full bg-[#d4af37]" />
+                    <span>QC photos within 24h — ship only after your approval</span>
+                  </div>
                 </div>
                 <p className="text-xs text-[#5c5345]">
-                  Includes: QC + discreet packaging + worldwide shipping. Taxes/duties (if any) confirmed on WhatsApp.
+                  Includes: QC + discreet packaging + worldwide shipping. Ship only after your approval. Taxes/duties (if any) confirmed on WhatsApp.
                 </p>
               </div>
 
@@ -1516,6 +1532,7 @@ export default function HomeClient() {
             <Accordion title="Details" defaultOpen>
               <div className="space-y-2 text-sm text-[#4f4635]">
                 <p>Includes: sourcing + QC + discreet packaging + worldwide shipping</p>
+                <p>QC photos: within 24h. Ship only after your approval.</p>
                 <p>Delivery estimate: US &amp; Europe 7–12 business days; other countries ~7–20 business days</p>
                 <p>Taxes/duties (if any): confirmed on WhatsApp before invoice</p>
               </div>
@@ -1849,6 +1866,9 @@ export default function HomeClient() {
               >
                 Email us (if WhatsApp is blocked)
               </button>
+              <p className="text-xs text-[#5c5345]">
+                QC photos within 24h. Ship only after your approval.
+              </p>
               <p className="text-xs text-[#5c5345]">
                 Privacy: your screenshot is used only to prepare your quote.
               </p>

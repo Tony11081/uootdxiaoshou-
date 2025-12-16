@@ -3,6 +3,7 @@ import { Geist_Mono, Playfair_Display, Sora } from "next/font/google";
 import "./globals.css";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { FloatingWhatsApp } from "@/components/floating-whatsapp";
 
 const SITE_URL = "https://newuootd.com";
 
@@ -53,6 +54,7 @@ export default function RootLayout({
         <div className="flex min-h-screen flex-col">
           <SiteHeader />
           <div className="flex-1 pt-14">{children}</div>
+          <FloatingWhatsApp />
           <SiteFooter />
         </div>
       </body>

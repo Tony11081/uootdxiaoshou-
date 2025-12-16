@@ -50,6 +50,10 @@ export default function FAQPage() {
           a="Yes—worldwide free shipping. US & Europe: 7–12 business days. Other countries: ~7–20 business days."
         />
         <FAQItem
+          q="When do I receive QC photos?"
+          a="Within 24h. We ship only after your approval."
+        />
+        <FAQItem
           q="What can you source?"
           a="Luxury shoes, bags, clothing, swimwear, sunglasses, and accessories across many brands."
         />
