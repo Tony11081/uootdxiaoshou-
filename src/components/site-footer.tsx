@@ -47,6 +47,11 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
+              <Link href="/catalog" className="hover:text-[var(--ink)]">
+                Catalog
+              </Link>
+            </li>
+            <li>
               <Link href="/bags" className="hover:text-[var(--ink)]">
                 Bags
               </Link>
