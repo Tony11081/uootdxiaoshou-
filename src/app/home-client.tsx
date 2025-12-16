@@ -15,7 +15,7 @@ const MIN_SCAN_MS = 1200;
 const UPLOAD_INPUT_ID = "uootd-upload-input";
 
 const expectationLine: Record<Locale, string> = {
-  en: "Most items get an instant quote. If an instant quote isn’t available, an insider replies on WhatsApp.",
+  en: "Most items get an instant quote. If an instant quote isn't available, an insider replies on WhatsApp.",
   pt: "A maioria dos itens recebe cotacao instantanea. Se nao estiver disponivel, um insider responde no WhatsApp.",
   es: "La mayoria de articulos reciben cotizacion instantanea. Si no esta disponible, un insider responde por WhatsApp.",
 };
