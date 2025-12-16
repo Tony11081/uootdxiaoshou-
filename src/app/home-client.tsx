@@ -384,6 +384,7 @@ export default function HomeClient() {
   const [error, setError] = useState<string | null>(null);
   const [rateLimitOpen, setRateLimitOpen] = useState(false);
   const [rateLimitInfo, setRateLimitInfo] = useState<RateLimitInfo | null>(null);
+  const [tierHelpOpen, setTierHelpOpen] = useState(false);
   const [preview, setPreview] = useState<string>(demoTiles[0].imageUrl);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [selectedTier, setSelectedTier] = useState<QuoteTier>("premium");
@@ -449,7 +450,7 @@ export default function HomeClient() {
     selectedTier === "premium" ? premiumQuoteUsd : normalQuoteUsd;
 
   const primaryCtaLabel = useMemo(() => {
-    return isFastTrack ? "SECURE CHECKOUT" : "CONTACT VIP DESK";
+    return isFastTrack ? "BUY WITH PAYPAL PROTECTION" : "CHAT ON WHATSAPP";
   }, [isFastTrack]);
 
   const statusBadge = isFastTrack ? "Instant quote" : "Manual review";
@@ -1423,6 +1424,9 @@ export default function HomeClient() {
                       <p className="text-2xl font-semibold text-[var(--ink)]">
                         {quoteLabel(premiumQuoteUsd)}
                       </p>
+                      <p className="mt-1 text-xs text-[#5c5345]">
+                        Priority sourcing · full QC photos · premium packaging
+                      </p>
                     </button>
                     <button
                       type="button"
@@ -1440,32 +1444,25 @@ export default function HomeClient() {
                       <p className="text-2xl font-semibold text-[var(--ink)]">
                         {quoteLabel(normalQuoteUsd ?? null)}
                       </p>
+                      <p className="mt-1 text-xs text-[#5c5345]">
+                        Best value · standard QC photos · standard packaging
+                      </p>
                     </button>
                   </div>
-                  <p className="text-xs text-[#5c5345]">
-                    Selected:{" "}
-                    {selectedTier === "premium"
-                      ? "Premium version"
-                      : "Normal version"}
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-3 text-xs text-[#4f4635] sm:grid-cols-4">
-                    {[
-                      { label: "Quote", desc: "~3s" },
-                      { label: "Confirm", desc: "Client chat" },
-                      { label: "Invoice", desc: "PayPal" },
-                      { label: "Ship", desc: "QC + discreet pack" },
-                    ].map((step) => (
-                      <div
-                        key={step.label}
-                        className="rounded-2xl border border-black/8 bg-white/80 px-3 py-3 text-center shadow-sm"
-                      >
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7b6848]">
-                          {step.label}
-                        </p>
-                        <p className="text-sm text-[var(--ink)]">{step.desc}</p>
-                      </div>
-                    ))}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-[#5c5345]">
+                      Selected:{" "}
+                      {selectedTier === "premium"
+                        ? "Premium version"
+                        : "Normal version"}
+                    </p>
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-[#7b6848] underline decoration-dotted hover:text-black"
+                      onClick={() => setTierHelpOpen(true)}
+                    >
+                      What&apos;s the difference?
+                    </button>
                   </div>
 
                   {isFootwear ? (
@@ -1478,53 +1475,34 @@ export default function HomeClient() {
                   ) : null}
 
                   <div className="flex flex-wrap gap-3">
-              <button
-                className="gold-button rounded-full px-5 py-3 text-sm font-semibold uppercase tracking-[0.18em] disabled:opacity-60 disabled:cursor-not-allowed"
-                onClick={handleCheckoutClick}
-                disabled={false}
-              >
-                {primaryCtaLabel}
-              </button>
                     <button
                       className="outline-button rounded-full px-5 py-3 text-sm font-semibold uppercase tracking-[0.18em]"
                       onClick={handleAddToCart}
                     >
-                      Add to Sourcing List
+                      Save to Sourcing List
                     </button>
                     <button
                       className="outline-button rounded-full px-5 py-3 text-sm font-semibold uppercase tracking-[0.18em]"
                       onClick={() => void handleRequestMoreMedia()}
                     >
-                      Get more photos/video
+                      Need QC photos/video?
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-2 text-xs text-[#5c5345] sm:grid-cols-2">
-                    <div className="flex items-center gap-2 rounded-2xl border border-black/8 bg-white/80 px-3 py-2 shadow-sm">
-                      <span className="h-2 w-2 rounded-full bg-[#d4af37]" />
-                      <span>Discreet packaging</span>
-                    </div>
-                    <div className="flex items-center gap-2 rounded-2xl border border-black/8 bg-white/80 px-3 py-2 shadow-sm">
-                      <span className="h-2 w-2 rounded-full bg-[#d4af37]" />
-                      <span>PayPal invoice only</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#5c5345] sm:grid-cols-4">
+                  <div className="flex flex-wrap gap-2 text-xs text-[#5c5345]">
                     {[
-                      "Quote",
-                      "Checkout",
-                      "WhatsApp confirm",
-                      "PayPal invoice",
-                    ].map((label, idx) => (
-                      <div key={label} className="flex flex-col items-center gap-1">
-                        <span
-                          className={`h-2 w-2 rounded-full ${
-                            idx === 0 ? "bg-[#d4af37]" : "bg-black/15"
-                          }`}
-                        />
-                        <span className="text-center leading-tight">{label}</span>
-                      </div>
+                      `${statusBadge}`,
+                      "PayPal Buyer Protection",
+                      "QC photos before shipping",
+                      "Worldwide free shipping",
+                      "Discreet packaging",
+                    ].map((label) => (
+                      <span
+                        key={label}
+                        className="rounded-full border border-black/8 bg-white/80 px-3 py-2 shadow-sm"
+                      >
+                        {label}
+                      </span>
                     ))}
                   </div>
 
@@ -1920,6 +1898,57 @@ export default function HomeClient() {
             </div>
             <p className="mt-4 text-xs text-[#5c5345]">
               Tip: If you still need help, send your screenshot in WhatsApp and we&apos;ll confirm details there.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      {tierHelpOpen ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
+          <div className="glass-card relative w-full max-w-xl rounded-3xl p-6">
+            <button
+              className="absolute right-3 top-3 text-sm text-[#7b6848]"
+              onClick={() => setTierHelpOpen(false)}
+            >
+              Close
+            </button>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#7b6848]">
+              Premium vs Normal
+            </p>
+            <h3 className="text-2xl font-semibold text-[var(--ink)]">
+              What&apos;s the difference?
+            </h3>
+            <p className="mt-2 text-sm text-[#4f4635]">
+              Both options include PayPal Buyer Protection, discreet packaging, and worldwide shipping. The difference is the service level.
+            </p>
+
+            <div className="mt-5 overflow-hidden rounded-3xl border border-black/8 bg-white/80 shadow-sm">
+              <div className="grid grid-cols-3 border-b border-black/8 bg-white/70 text-xs font-semibold uppercase tracking-[0.14em] text-[#7b6848]">
+                <div className="px-4 py-3" />
+                <div className="px-4 py-3">Premium</div>
+                <div className="px-4 py-3">Normal</div>
+              </div>
+              {[
+                { k: "Sourcing speed", p: "Priority", n: "Standard" },
+                { k: "QC photos", p: "Full set", n: "Standard set" },
+                { k: "Packaging", p: "Premium options", n: "Standard" },
+                { k: "Best for", p: "Highest confidence", n: "Best value" },
+              ].map((row) => (
+                <div
+                  key={row.k}
+                  className="grid grid-cols-3 border-b border-black/8 text-sm text-[#4f4635] last:border-b-0"
+                >
+                  <div className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#7b6848]">
+                    {row.k}
+                  </div>
+                  <div className="px-4 py-3">{row.p}</div>
+                  <div className="px-4 py-3">{row.n}</div>
+                </div>
+              ))}
+            </div>
+
+            <p className="mt-4 text-xs text-[#5c5345]">
+              Exact options may vary by item and availability. We confirm details on WhatsApp before invoicing.
             </p>
           </div>
         </div>
