@@ -32,12 +32,9 @@ export function ContactInfo({ embedded = false, locale = "en" }: ContactInfoProp
           href={`https://wa.me/${CONTACT.whatsappDigits}`}
           target="_blank"
           rel="noreferrer"
-          className="gold-button flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold uppercase tracking-[0.12em]"
+          className="gold-button flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold uppercase tracking-[0.12em]"
         >
           <span>WhatsApp</span>
-          <span className="font-mono text-sm normal-case tracking-normal">
-            {CONTACT.whatsappDisplay}
-          </span>
         </a>
 
         <div className="grid gap-2 sm:grid-cols-2">

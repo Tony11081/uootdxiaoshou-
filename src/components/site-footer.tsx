@@ -120,7 +120,6 @@ export function SiteFooter() {
       <div className="border-t border-black/10">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-[#5c5345] sm:px-8 lg:px-12">
           <p>&copy; {year} UOOTD. All rights reserved.</p>
-          <p className="font-mono">{CONTACT.whatsappDisplay}</p>
         </div>
       </div>
     </footer>
