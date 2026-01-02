@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { ChangeEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ContactInfo, CONTACT } from "@/components/contact-info";
+import { CraftQcGallery } from "@/components/craft-qc-gallery";
 import { HeroDemo } from "@/components/hero-demo";
 import { CartItem, loadCart, saveCart } from "@/lib/cart-storage";
 import type { Locale, Quote } from "@/types/quote";
@@ -1018,6 +1019,10 @@ export default function HomeClient() {
               </div>
             </div>
           </section>
+        ) : null}
+
+        {view === "upload" ? (
+          <CraftQcGallery />
         ) : null}
 
         {view === "upload" ? (

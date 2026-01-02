@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CraftQcGallery } from "@/components/craft-qc-gallery";
 
 export default function AboutPage() {
   return (
@@ -37,6 +38,8 @@ export default function AboutPage() {
           <li>Receive a PayPal invoice and finalize privately.</li>
         </ol>
       </section>
+
+      <CraftQcGallery />
 
       <div className="flex flex-wrap gap-2">
         <Link

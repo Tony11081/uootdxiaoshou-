@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CONTACT } from "@/components/contact-info";
+import { CraftQcGallery } from "@/components/craft-qc-gallery";
 
 const SITE_URL = "https://newuootd.com";
 const VIP_MESSAGE =
@@ -66,6 +67,8 @@ export default function CatalogPage() {
           </Link>
         </div>
       </section>
+
+      <CraftQcGallery />
     </div>
   );
 }
