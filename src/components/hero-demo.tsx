@@ -182,12 +182,20 @@ export function HeroDemo() {
             A quick walkthrough of our private quoting flow.
           </p>
         </div>
-        <Link
-          href="/#upload"
-          className="gold-button rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em]"
-        >
-          Try it now
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/catalog"
+            className="gold-button rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em]"
+          >
+            Browse Products
+          </Link>
+          <Link
+            href="/#upload"
+            className="outline-button rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em]"
+          >
+            Try it now
+          </Link>
+        </div>
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_0.85fr]">
