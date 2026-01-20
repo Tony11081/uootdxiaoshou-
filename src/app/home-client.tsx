@@ -15,6 +15,8 @@ const QUOTE_TIMEOUT_MS = 45000;
 const MAX_IMAGE_CHARS_FOR_CART = 8000;
 const MIN_SCAN_MS = 1200;
 const UPLOAD_INPUT_ID = "uootd-upload-input";
+const HERO_IMAGE =
+  "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=2000&q=80";
 
 const expectationLine: Record<Locale, string> = {
   en: "Most items get an instant quote. If an instant quote isn't available, an insider replies on WhatsApp.",
@@ -154,6 +156,13 @@ const clientReviews = [
     note: "Payment only via PayPal invoice. No surprise fees—taxes/shipping spelled out in chat before I paid.",
     avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=60&sat=-10",
   },
+] as const;
+
+const HERO_REVIEWS = clientReviews.slice(0, 3);
+const HERO_TRUST_BADGES = [
+  "PayPal Protection",
+  "QC photos in 24h",
+  "Worldwide shipping",
 ] as const;
 
 const caseSnippets = [
@@ -410,8 +419,8 @@ export default function HomeClient() {
   const cartHydrated = useRef(false);
   const [cartError, setCartError] = useState<string | null>(null);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
-  const uploadSectionRef = useRef<HTMLDivElement | null>(null);
   const [promoSeconds, setPromoSeconds] = useState(900);
+  const [catalogPromptOpen, setCatalogPromptOpen] = useState(false);
 
   useEffect(() => {
     cartHydrated.current = true;
@@ -433,6 +442,19 @@ export default function HomeClient() {
     if (status === "ready" || status === "manual") return "result";
     return "upload";
   }, [status]);
+
+  useEffect(() => {
+    if (view !== "upload") {
+      setCatalogPromptOpen(false);
+      return;
+    }
+
+    const id = window.setTimeout(() => {
+      setCatalogPromptOpen(true);
+    }, 3000);
+
+    return () => window.clearTimeout(id);
+  }, [view]);
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -861,200 +883,99 @@ export default function HomeClient() {
 
   return (
     <div className="relative min-h-screen overflow-hidden px-4 pb-28 pt-10 sm:px-8 lg:px-12">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-x-0 top-[-20%] h-[520px] bg-gradient-to-b from-[rgba(17,17,17,0.12)] via-transparent to-transparent blur-3xl" />
-        <div className="absolute left-[15%] top-[10%] h-32 w-32 rounded-full bg-[#d4af37]/30 blur-3xl" />
-        <div className="absolute right-[8%] top-[12%] h-24 w-24 rounded-full bg-[#111111]/10 blur-2xl" />
-      </div>
-
-      <header className="relative z-10 mb-8 flex flex-col gap-4 sm:items-center sm:justify-between sm:flex-row">
-        <div>
-          <p className="text-xs uppercase tracking-[0.32em] text-[#7b6848]">
-            UOOTD | Insider Channel
-          </p>
-          <h1 className="font-[var(--font-playfair)] text-3xl font-semibold leading-tight text-[var(--ink)] sm:text-4xl">
-            See it. Screenshot it. Upload it.
-          </h1>
-          <p className="text-sm text-[#4f4635]">
-            Private quotes in under 3 seconds.
-          </p>
-          <p className="mt-3 max-w-xl text-xs leading-relaxed text-[#5c5345]">
-            Looking for <strong>UOOTD official site</strong>? You&apos;re in the right place. Whether you found us searching{" "}
-            <em>uootd bags</em>, <em>uootd oficial</em>, <em>uuotd</em>, or <em>uotd</em> — this is the UOOTD insider quoting platform.
-          </p>
-          <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-[#7b6848]">
-            <li>
-              <Link href="/bags" className="underline decoration-dotted hover:text-black">
-                Explore Bags
-              </Link>
-            </li>
-            <li>
-              <Link href="/catalog" className="underline decoration-dotted hover:text-black">
-                Browse Catalog
-              </Link>
-            </li>
-            <li>
-              <Link href="/golden-goose" className="underline decoration-dotted hover:text-black">
-                Golden Goose Quotes
-              </Link>
-            </li>
-            <li>
-              <Link href="/about" className="underline decoration-dotted hover:text-black">
-                About UOOTD
-              </Link>
-            </li>
-          </ul>
-        </div>
-
-        <div className="flex items-center gap-2 rounded-full border border-black/10 bg-white/60 px-2 py-1 text-sm shadow-md backdrop-blur">
-          {(["en", "pt", "es"] as Locale[]).map((opt) => (
-            <button
-              key={opt}
-              onClick={() => setLocale(opt)}
-              className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] transition ${
-                locale === opt
-                  ? "bg-black text-[#fef7d2]"
-                  : "text-[#5b5143] hover:text-black"
-              }`}
-            >
-              {opt}
-            </button>
-          ))}
-        </div>
-      </header>
-
       <main className="relative z-10 mx-auto flex max-w-6xl flex-col gap-10">
-        {view === "upload" ? <HeroDemo /> : null}
-
         {view === "upload" ? (
-          <section className="glass-card overflow-hidden rounded-3xl border border-black/8 bg-white/90 p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#7b6848]">
-                  Product catalog
+          <>
+            <section className="relative isolate min-h-[70vh] overflow-hidden rounded-[2.5rem] border border-black/10 bg-black/70">
+              <Image
+                src={HERO_IMAGE}
+                alt="Luxury product background"
+                fill
+                className="object-cover"
+                sizes="100vw"
+                priority
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/70" />
+              <div className="relative z-10 flex h-full flex-col items-center justify-center gap-4 px-6 py-16 text-center sm:px-10 sm:py-20">
+                <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#fef7d2]/90">
+                  UOOTD Insider
                 </p>
-                <h2 className="mt-1 text-2xl font-semibold text-[var(--ink)]">
-                  Browse our live directory
-                </h2>
-                <p className="mt-2 max-w-2xl text-sm text-[#4f4635]">
-                  Shoes, bags, clothing, swimwear, sunglasses, and accessories. Find a piece, take a
-                  screenshot, then upload it for an instant Premium + Normal quote.
+                <h1 className="font-[var(--font-playfair)] text-3xl font-semibold text-white sm:text-5xl">
+                  Luxury Fashion, Insider Prices
+                </h1>
+                <p className="text-sm text-white/80 sm:text-base">
+                  Private quotes in under 3 seconds.
                 </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
                 <Link
                   href="/catalog"
-                  className="gold-button rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em]"
+                  className="gold-button rounded-full px-8 py-4 text-base font-semibold uppercase tracking-[0.2em] sm:text-lg"
                 >
-                  Open catalog
+                  Shop Now
                 </Link>
-                <a
-                  href={`https://wa.me/${CONTACT.whatsappDigits}?text=${encodeURIComponent(
-                    "Hi UOOTD, I'm browsing your product catalog and I'd like to ask about an item. I'll send a screenshot or product name. Catalog: https://newuootd.com/catalog",
-                  )}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="outline-button rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em]"
-                >
-                  WhatsApp help
-                </a>
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
-              <div className="grid gap-3">
-                <div className="rounded-2xl border border-black/8 bg-white/80 px-4 py-3 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#7b6848]">
-                    Shipping
-                  </p>
-                  <p className="mt-1 text-sm text-[#4f4635]">
-                    Worldwide free shipping. US &amp; Europe: 7-12 business days. Other countries:
-                    ~7-20 business days.
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-black/8 bg-white/80 px-4 py-3 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#7b6848]">
-                    Tip
-                  </p>
-                  <p className="mt-1 text-sm text-[#4f4635]">
-                    Tap an item in the catalog, screenshot it, then upload here to get a private
-                    quote.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-2 text-xs text-[#5c5345]">
-                  {[
-                    "PayPal invoice only",
-                    "PayPal Buyer Protection",
-                    "No prepayment",
-                    "QC photos within 24h",
-                    "Ship only after approval",
-                  ].map((tag) => (
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#fef7d2]/90">
+                  2000+ orders - PayPal protected
+                </p>
+                <div className="flex flex-wrap justify-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/80">
+                  {HERO_TRUST_BADGES.map((badge) => (
                     <span
-                      key={tag}
-                      className="rounded-full border border-black/8 bg-white/80 px-3 py-2 shadow-sm"
+                      key={badge}
+                      className="rounded-full border border-white/20 bg-white/10 px-3 py-1"
                     >
-                      {tag}
+                      {badge}
                     </span>
                   ))}
                 </div>
+                <div className="mt-2 grid w-full max-w-4xl gap-3 sm:grid-cols-3">
+                  {HERO_REVIEWS.map((review) => {
+                    const snippet =
+                      review.note.length > 60
+                        ? `${review.note.slice(0, 60)}...`
+                        : review.note;
+                    return (
+                      <div
+                        key={review.name}
+                        className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/90 px-3 py-3 text-left shadow-sm"
+                      >
+                        <div className="relative h-8 w-8 overflow-hidden rounded-full bg-black/10">
+                          <Image
+                            src={review.avatar}
+                            alt={review.name}
+                            fill
+                            className="object-cover"
+                            sizes="32px"
+                          />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-[var(--ink)]">
+                            {review.name}
+                          </p>
+                          <p className="text-[11px] text-[#5c5345]">{snippet}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
+            </section>
 
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {catalogCategories.map((cat) => (
-                  <Link
-                    key={cat.title}
-                    href="/catalog"
-                    className="group rounded-2xl border border-black/10 bg-gradient-to-br from-white/85 to-[#f5efe2] px-4 py-4 shadow-sm transition hover:shadow-lg"
+            <div className="flex justify-center">
+              <div className="flex items-center gap-2 rounded-full border border-black/10 bg-white/70 px-2 py-1 text-sm shadow-sm">
+                {(["en", "pt", "es"] as Locale[]).map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => setLocale(opt)}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] transition ${
+                      locale === opt
+                        ? "bg-black text-[#fef7d2]"
+                        : "text-[#5b5143] hover:text-black"
+                    }`}
                   >
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7b6848]">
-                      {cat.title}
-                    </p>
-                    <p className="mt-1 text-xs text-[#4f4635]">{cat.note}</p>
-                    <div className="mt-4 scanner-rail h-1 rounded-full bg-black/5" />
-                  </Link>
+                    {opt}
+                  </button>
                 ))}
               </div>
             </div>
-          </section>
-        ) : null}
-
-        {view === "upload" ? (
-          <CraftQcGallery />
-        ) : null}
-
-        {view === "upload" ? (
-          <section
-            ref={uploadSectionRef}
-            className="glass-card rounded-3xl border border-black/8 bg-white/90 p-5"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-[#7b6848]">
-                  Limited-time offer
-                </p>
-                <h3 className="text-xl font-semibold text-[var(--ink)]">
-                  10% off your first PayPal invoice
-                </h3>
-                <p className="text-sm text-[#4f4635]">
-                  Applies to invoices opened in this session. No prepayment, PayPal only.
-                </p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-black px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#fef7d2]">
-                    Code: UOOTD10
-                  </span>
-                  <span className="text-xs text-[#5c5345]">Add in chat before invoice is sent.</span>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-xs uppercase tracking-[0.2em] text-[#7b6848]">Countdown</p>
-                <p className="text-2xl font-semibold text-[var(--ink)] tabular-nums">{promoClock}</p>
-                <p className="text-xs text-[#5c5345]">Reserve your slot while live.</p>
-              </div>
-            </div>
-          </section>
+          </>
         ) : null}
 
         {view === "upload" ? (
@@ -1355,6 +1276,107 @@ export default function HomeClient() {
                     ))}
                   </div>
                 </div>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {view === "upload" ? <HeroDemo /> : null}
+
+        {view === "upload" ? (
+          <CraftQcGallery />
+        ) : null}
+
+        {view === "upload" ? (
+          <section className="glass-card overflow-hidden rounded-3xl border border-black/8 bg-white/90 p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#7b6848]">
+                  Product catalog
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-[var(--ink)]">
+                  Browse our live directory
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm text-[#4f4635]">
+                  Shoes, bags, clothing, swimwear, sunglasses, and accessories. Find a piece, take a
+                  screenshot, then upload it for an instant Premium + Normal quote.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  href="/catalog"
+                  className="gold-button rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em]"
+                >
+                  Open catalog
+                </Link>
+                <a
+                  href={`https://wa.me/${CONTACT.whatsappDigits}?text=${encodeURIComponent(
+                    "Hi UOOTD, I found an item I like. Sending screenshot now.",
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="outline-button rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em]"
+                >
+                  WhatsApp help
+                </a>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+              <div className="grid gap-3">
+                <div className="rounded-2xl border border-black/8 bg-white/80 px-4 py-3 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#7b6848]">
+                    Shipping
+                  </p>
+                  <p className="mt-1 text-sm text-[#4f4635]">
+                    Worldwide free shipping. US &amp; Europe: 7-12 business days. Other countries:
+                    ~7-20 business days.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-black/8 bg-white/80 px-4 py-3 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#7b6848]">
+                    Tip
+                  </p>
+                  <p className="mt-1 text-sm text-[#4f4635]">
+                    Tap an item in the catalog, screenshot it, then upload here to get a private
+                    quote.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2 text-xs text-[#5c5345]">
+                  {[
+                    "PayPal invoice only",
+                    "PayPal Buyer Protection",
+                    "No prepayment",
+                    "QC photos within 24h",
+                    "Ship only after approval",
+                  ].map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full border border-black/8 bg-white/80 px-3 py-2 shadow-sm"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {catalogCategories.map((cat) => (
+                  <Link
+                    key={cat.title}
+                    href="/catalog"
+                    className="group rounded-2xl border border-black/10 bg-gradient-to-br from-white/85 to-[#f5efe2] px-4 py-4 shadow-sm transition hover:shadow-lg"
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7b6848]">
+                      {cat.title}
+                    </p>
+                    <p className="mt-1 text-xs text-[#4f4635]">{cat.note}</p>
+                    <div className="mt-4 scanner-rail h-1 rounded-full bg-black/5" />
+                  </Link>
+                ))}
               </div>
             </div>
           </section>
@@ -1832,6 +1854,52 @@ export default function HomeClient() {
           </section>
         ) : null}
       </main>
+
+      {catalogPromptOpen && view === "upload" ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4">
+          <div
+            className="glass-card relative w-full max-w-md rounded-3xl p-6 text-center"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="catalog-prompt-title"
+          >
+            <button
+              className="absolute right-4 top-3 text-xs font-semibold uppercase tracking-[0.16em] text-[#7b6848]"
+              onClick={() => setCatalogPromptOpen(false)}
+              aria-label="Close"
+            >
+              Close
+            </button>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#7b6848]">
+              UOOTD Insider
+            </p>
+            <h3
+              id="catalog-prompt-title"
+              className="mt-2 text-2xl font-semibold text-[var(--ink)]"
+            >
+              Want to browse our catalog?
+            </h3>
+            <p className="mt-2 text-sm text-[#4f4635]">
+              Open the catalog, then screenshot any item for a private quote.
+            </p>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
+              <Link
+                href="/catalog"
+                className="gold-button rounded-full px-5 py-2 text-sm font-semibold uppercase tracking-[0.16em]"
+              >
+                Browse catalog
+              </Link>
+              <button
+                type="button"
+                className="outline-button rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em]"
+                onClick={() => setCatalogPromptOpen(false)}
+              >
+                Not now
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {view === "result" ? (
         <div className="fixed inset-x-0 bottom-4 z-30 px-4 sm:px-8 lg:px-12">
