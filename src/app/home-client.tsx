@@ -975,6 +975,32 @@ export default function HomeClient() {
                 ))}
               </div>
             </div>
+
+            <section className="glass-card overflow-hidden rounded-3xl border-2 border-[#d4af37]/40 bg-gradient-to-r from-[#fef7d2] to-white p-5 shadow-xl">
+              <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:justify-between sm:text-left">
+                <div className="flex-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#7b6848]">
+                    🎁 Limited Time Gift
+                  </p>
+                  <h3 className="mt-1 text-xl font-semibold text-[var(--ink)] sm:text-2xl">
+                    Free LV Keychain with Your First Order
+                  </h3>
+                  <p className="mt-1 text-sm text-[#4f4635]">
+                    Add us on WhatsApp and place your order to receive a complimentary luxury keychain
+                  </p>
+                </div>
+                <a
+                  href={`https://wa.me/${CONTACT.whatsappDigits}?text=${encodeURIComponent(
+                    "Hi UOOTD, I'd like to place an order and claim my free LV keychain gift!",
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="gold-button rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-[0.16em] shadow-lg"
+                >
+                  Claim Gift on WhatsApp
+                </a>
+              </div>
+            </section>
           </>
         ) : null}
 
