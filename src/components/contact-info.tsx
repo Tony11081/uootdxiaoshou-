@@ -9,8 +9,8 @@ export const CONTACT = {
   whatsappDisplay: "+44 7933884145",
   whatsappDigits: "447933884145",
   email: "Tony@uootd.net",
-  textDisplay: "+01 508 322 1340",
-  textDigits: "+15083221340",
+  textDisplay: "+44 7933884145",
+  textDigits: "+447933884145",
   hours: "Monday to Friday: 9AM - 7PM EST\nSaturday: 10AM - 5PM EST",
 } as const;
 
