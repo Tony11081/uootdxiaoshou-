@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CONTACT } from "@/components/contact-info";
 import { CartItem, loadCart, saveCart } from "@/lib/cart-storage";
 
-const SALES_WHATSAPP = "+8613462248923";
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=200&q=60";
 
@@ -153,7 +153,7 @@ export default function CartPage() {
       .filter(Boolean)
       .join("\n");
 
-    const salesNumber = sanitizeNumber(SALES_WHATSAPP);
+    const salesNumber = sanitizeNumber(CONTACT.whatsappDigits);
     return `https://wa.me/${salesNumber}?text=${encodeURIComponent(message)}`;
   }, [cart, totals.selectedTotal, totals.premiumTotal, totals.normalTotal, totals.vipCount]);
 

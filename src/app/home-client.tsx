@@ -10,7 +10,6 @@ import { HeroDemo } from "@/components/hero-demo";
 import { CartItem, loadCart, saveCart } from "@/lib/cart-storage";
 import type { Locale, Quote } from "@/types/quote";
 
-const SALES_WHATSAPP = "+86 134 6224 8923";
 const QUOTE_TIMEOUT_MS = 45000;
 const MAX_IMAGE_CHARS_FOR_CART = 8000;
 const MIN_SCAN_MS = 1200;
@@ -678,7 +677,7 @@ export default function HomeClient() {
   };
 
   const buildWhatsAppLink = () => {
-    const salesNumber = sanitizeNumber(SALES_WHATSAPP);
+    const salesNumber = sanitizeNumber(CONTACT.whatsappDigits);
     return `https://wa.me/${salesNumber}?text=${encodeURIComponent(buildWhatsAppMessage())}`;
   };
 
@@ -732,7 +731,7 @@ export default function HomeClient() {
       } catch {}
     }
 
-    const salesNumber = sanitizeNumber(SALES_WHATSAPP);
+    const salesNumber = sanitizeNumber(CONTACT.whatsappDigits);
     const link = `https://wa.me/${salesNumber}?text=${encodeURIComponent(message)}`;
     if (typeof window !== "undefined") {
       window.location.href = link;

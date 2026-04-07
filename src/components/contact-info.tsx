@@ -6,8 +6,8 @@ type ContactInfoProps = {
 };
 
 export const CONTACT = {
-  whatsappDisplay: "+86 134 6224 8923",
-  whatsappDigits: "8613462248923",
+  whatsappDisplay: "+44 7933884145",
+  whatsappDigits: "447933884145",
   email: "Tony@uootd.net",
   textDisplay: "+01 508 322 1340",
   textDigits: "+15083221340",
