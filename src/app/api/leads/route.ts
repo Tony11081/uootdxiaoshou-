@@ -33,15 +33,37 @@ export async function POST(request: Request) {
   const paypal = typeof payload.paypal === "string" ? payload.paypal.trim() : "";
   const whatsapp = typeof payload.whatsapp === "string" ? payload.whatsapp.trim() : "";
 
-  if (!paypal || !whatsapp) {
-    return NextResponse.json({ error: "PayPal and WhatsApp are required" }, { status: 400 });
-  }
-
   if (channel === "manual") {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    if (!paypal || !whatsapp) {
+      return NextResponse.json(
+        { error: "PayPal and WhatsApp are required for manual entries" },
+        { status: 400 },
+      );
+    }
+  } else if (channel === "whatsapp") {
+    if (!whatsapp) {
+      return NextResponse.json(
+        { error: "WhatsApp is required for chat follow-up" },
+        { status: 400 },
+      );
+    }
+  } else if (channel === "email") {
+    if (!paypal) {
+      return NextResponse.json(
+        { error: "PayPal email is required for email follow-up" },
+        { status: 400 },
+      );
+    }
+  } else if (!paypal && !whatsapp) {
+    return NextResponse.json(
+      { error: "At least one contact method is required" },
+      { status: 400 },
+    );
   }
 
   const premiumQuoteUsd = payload.quoteUsd === null ? null : toNumber(payload.quoteUsd);

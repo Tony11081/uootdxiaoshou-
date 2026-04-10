@@ -130,6 +130,7 @@ export default function AdminPortal() {
   };
 
   const copyValue = (value: string) => {
+    if (!value.trim()) return;
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(value).catch(() => {});
     }
@@ -611,8 +612,8 @@ export default function AdminPortal() {
                       })()}
                     </td>
                     <td className="px-3 py-2 text-[#5c5345]">
-                      <div>{lead.paypal}</div>
-                      <div className="text-[11px]">{lead.whatsapp}</div>
+                      <div>{lead.paypal || "PayPal not captured"}</div>
+                      <div className="text-[11px]">{lead.whatsapp || "WhatsApp not captured"}</div>
                       {lead.channel ? (
                         <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7b6848]">
                           via {lead.channel}
@@ -625,20 +626,24 @@ export default function AdminPortal() {
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex flex-wrap gap-1">
-                        <button
-                          className="outline-button rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]"
-                          onClick={() => copyValue(lead.paypal)}
-                        >
-                          Copy PayPal
-                        </button>
-                        <a
-                          className="outline-button rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]"
-                          href={`https://wa.me/${lead.whatsapp.replace(/\D/g, "")}`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          WhatsApp
-                        </a>
+                        {lead.paypal ? (
+                          <button
+                            className="outline-button rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]"
+                            onClick={() => copyValue(lead.paypal)}
+                          >
+                            Copy PayPal
+                          </button>
+                        ) : null}
+                        {lead.whatsapp ? (
+                          <a
+                            className="outline-button rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]"
+                            href={`https://wa.me/${lead.whatsapp.replace(/\D/g, "")}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            WhatsApp
+                          </a>
+                        ) : null}
                         {lead.quoteId ? (
                           <a
                             className="outline-button rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]"

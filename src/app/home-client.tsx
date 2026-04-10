@@ -653,6 +653,8 @@ export default function HomeClient() {
   };
 
   const buildWhatsAppMessage = () => {
+    const paypal = lead.paypal.trim();
+    const whatsapp = lead.whatsapp.trim();
     const premiumText =
       premiumQuoteUsd === null ? "VIP Requested" : `$${formatUsd(premiumQuoteUsd)}`;
     const normalText =
@@ -666,8 +668,8 @@ export default function HomeClient() {
       `Premium Quote: ${premiumText}`,
       `Normal Quote: ${normalText}`,
       `Selected: ${selectedTier === "premium" ? "Premium" : "Normal"} (${selectedText})`,
-      `Customer PayPal: ${lead.paypal}`,
-      `Customer WhatsApp: ${lead.whatsapp}`,
+      paypal ? `Customer PayPal: ${paypal}` : "Customer PayPal: to be shared in chat",
+      whatsapp ? `Customer WhatsApp: ${whatsapp}` : null,
       isFootwear ? `Size: ${lead.size || "N/A"}` : null,
       lead.note?.trim() ? `Note: ${lead.note.trim()}` : null,
       "Screenshot: uploaded via uootd.com",
@@ -767,8 +769,14 @@ export default function HomeClient() {
   };
 
   const buildLeadPayload = (channel: "whatsapp" | "email") => {
+    const paypal = lead.paypal.trim();
+    const whatsapp = lead.whatsapp.trim();
+    const note = lead.note?.trim();
     return {
-      ...lead,
+      paypal,
+      whatsapp,
+      size: lead.size,
+      note: note || undefined,
       quoteId: quote.id,
       category: quote.category,
       productName: quote.productName,
@@ -782,11 +790,27 @@ export default function HomeClient() {
     };
   };
 
+  const validateLeadForChannel = (channel: "whatsapp" | "email") => {
+    const paypal = lead.paypal.trim();
+    const whatsapp = lead.whatsapp.trim();
+
+    if (channel === "whatsapp" && !whatsapp) {
+      return "WhatsApp is required to continue in chat.";
+    }
+
+    if (channel === "email" && !paypal) {
+      return "PayPal email is required if you'd like us to email the invoice.";
+    }
+
+    return null;
+  };
+
   const captureLead = (channel: "whatsapp" | "email") => {
     setError(null);
 
-    if (!lead.paypal || !lead.whatsapp) {
-      setError("PayPal email and WhatsApp are required.");
+    const validationError = validateLeadForChannel(channel);
+    if (validationError) {
+      setError(validationError);
       return false;
     }
 
@@ -1973,8 +1997,12 @@ export default function HomeClient() {
               Secure capture
             </p>
             <h3 className="text-2xl font-semibold text-[var(--ink)]">
-              Before WhatsApp, confirm your contact details.
+              Open your pre-filled WhatsApp chat.
             </h3>
+            <p className="mt-2 text-sm text-[#5c5345]">
+              WhatsApp is the only required field for chat. PayPal email is optional here and
+              can be shared later in the conversation.
+            </p>
 
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-[#5c5345]">
               <div className="flex items-center gap-2 rounded-2xl border border-black/8 bg-white/80 px-3 py-2 shadow-sm">
@@ -1990,7 +2018,28 @@ export default function HomeClient() {
             <div className="mt-4 space-y-3">
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-semibold text-[var(--ink)]">
+                  WhatsApp
+                </label>
+                <input
+                  type="tel"
+                  className="rounded-2xl border border-black/10 bg-white/80 px-4 py-3 text-sm shadow-inner focus:border-[#d4af37] focus:outline-none"
+                  placeholder="+44 7933 884145"
+                  value={lead.whatsapp}
+                  onChange={(e) =>
+                    setLead({ ...lead, whatsapp: e.target.value })
+                  }
+                />
+                <p className="text-xs text-[#5c5345]">
+                  Required to open chat and confirm size, color, and availability.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-semibold text-[var(--ink)]">
                   PayPal Email
+                  <span className="ml-2 text-xs font-medium text-[#7b6848]">
+                    optional now
+                  </span>
                 </label>
                 <input
                   type="email"
@@ -1998,30 +2047,9 @@ export default function HomeClient() {
                   placeholder="customer@paypal.com"
                   value={lead.paypal}
                   onChange={(e) => setLead({ ...lead, paypal: e.target.value })}
-                  required
                 />
                 <p className="text-xs text-[#5c5345]">
-                  Used only to send your invoice (we don&apos;t store payment
-                  details).
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-semibold text-[var(--ink)]">
-                  WhatsApp
-                </label>
-                <input
-                  type="tel"
-                  className="rounded-2xl border border-black/10 bg-white/80 px-4 py-3 text-sm shadow-inner focus:border-[#d4af37] focus:outline-none"
-                  placeholder="+86 13x xxxx xxxx"
-                  value={lead.whatsapp}
-                  onChange={(e) =>
-                    setLead({ ...lead, whatsapp: e.target.value })
-                  }
-                  required
-                />
-                <p className="text-xs text-[#5c5345]">
-                  Used to confirm size/color/availability (fastest channel).
+                  Speeds up invoicing later. You can also send it in chat when ready.
                 </p>
               </div>
 
@@ -2065,13 +2093,13 @@ export default function HomeClient() {
                   setLeadOpen(false);
                 }}
               >
-                Continue in WhatsApp
+                Open WhatsApp chat
               </a>
               <button
                 className="outline-button flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]"
                 onClick={handleEmailFallback}
               >
-                Email us (if WhatsApp is blocked)
+                Email us instead
               </button>
               <p className="text-xs text-[#5c5345]">
                 QC photos within 24h. Ship only after your approval.
